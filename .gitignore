@@ -312,5 +312,4 @@ OpenCover/
 
 # Azure Stream Analytics local run output 
 ASALocalRun/
-.vs/slnx.sqlite
 .vs/*
