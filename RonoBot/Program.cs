@@ -11,6 +11,7 @@ namespace RonoBot
 {
     class Program
     {
+        //Test change github
         static void Main(string[] args) => new Program().RunBotAsync().GetAwaiter().GetResult();
 
         private DiscordSocketClient _client;
