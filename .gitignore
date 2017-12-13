@@ -315,3 +315,4 @@ OpenCover/
 ASALocalRun/
 .vs/RonoBot/v15/.suo
 .vs/slnx.sqlite
+.vs/*
