@@ -33,7 +33,7 @@ namespace RonoBot
 
             _client.Log += Log;
             _client.UserJoined += AnnounceUserJoined;
-  
+            
 
             await RegisterCommandsAsync();
 
@@ -56,6 +56,11 @@ namespace RonoBot
             Console.WriteLine(arg);
 
             return Task.CompletedTask;
+        }
+
+        public async Task MessageReceived (SocketMessage m)
+        {
+            
         }
 
         public async Task RegisterCommandsAsync()
@@ -84,13 +89,12 @@ namespace RonoBot
             else if (CustomReactions.Contains(message.Content.ToUpper()))
             {
                 var context = new SocketCommandContext(_client, message);
+                await context.Channel.SendMessageAsync($"oi {context.User.Mention}");
+                
                 
 
-                var result = await _commands.ExecuteAsync(context, argPos, _services);
-                
-
-                if (!result.IsSuccess)
-                    Console.WriteLine(result.ErrorReason);
+                //if (!result.IsSuccess)
+                  //  Console.WriteLine(result.ErrorReason);
             }
 
         }

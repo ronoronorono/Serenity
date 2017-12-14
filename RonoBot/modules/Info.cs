@@ -36,7 +36,7 @@ namespace RonoBot.Modules
 
             await ReplyAsync("", false, builder.Build());
         }
-        
+        /*
         [Command("OI")]
         public async Task GreetingAsync()
         {
@@ -45,7 +45,7 @@ namespace RonoBot.Modules
             else
                 await ReplyAsync($"Oi {Context.User.Mention}");
         }
-
+        */
         
 
 
