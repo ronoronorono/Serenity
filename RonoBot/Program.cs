@@ -29,7 +29,7 @@ namespace RonoBot
                 .AddSingleton(_commands)
                 .BuildServiceProvider();
 
-            String botToken = "MzkwNDAyODQ4NDQzMjAzNTk1.DRJnAw.vJTw6kettFAPXPDf8tc5sAf6SOE";
+            String botToken = "";
 
             _client.Log += Log;
             _client.UserJoined += AnnounceUserJoined;
