@@ -32,6 +32,7 @@ namespace RonoBot
                 .AddSingleton(_commands)
                 .BuildServiceProvider();
 
+<<<<<<< HEAD
             string token;
             var fs = new FileStream("token.txt", FileMode.Open, FileAccess.Read);
 
@@ -40,6 +41,9 @@ namespace RonoBot
                 token = reader.ReadLine();
             }
             String botToken = token;
+=======
+            String botToken = "";
+>>>>>>> 742fd1c5f5742d8b8664770948a669be9089b749
 
             _client.Log += Log;
             _client.UserJoined += AnnounceUserJoined;
