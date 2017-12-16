@@ -1,0 +1,99 @@
+<html>
+	<head>
+		<title>comandos-serenity</title>
+		<link rel="stylesheet" type="text/css" href="css/cmd.css">
+	</head>
+	<!-- pq vc ta perdendo tempo inspecionando esse codigo????????????? -->
+
+	<body>
+	<h1>Comandos</h1>
+	<smallheight>
+	<h2>>ping</h2>
+	<h3>parametros: nenhum </h3>
+	<h3>requer permissões: nenhum</h3>
+	<hr>
+	retorna o ping do usuario.
+	<br><br><br><br>
+	<h2>>setcargo</h2>
+	<h3>parametros: <parm>Cargo</parm> c, <parm>*Usuario(s)</parm> u</h3>
+	<h3>requer permissões: Gerenciar cargos</h3>
+	<hr>
+	atribui o <parm>Cargo</parm> "c" para um ou mais <parm>Usuario(s)</parm> "u" <br />
+	*se o parametro de <parm>Usuario(s)</parm> "u" for substituido por @everyone, todos os usuarios do servidor receberão o <parm>Cargo</parm> "c"
+	<h4>Uso:</h4>
+	<ul>
+		<li>
+		<discordtxt>>setcargo @admin @usuario1 @usuario2</discordtxt>
+		</li>
+		<br>
+		atribui o cargo "admin" para o usuario1 e usuario2
+		<br>
+		<br>
+		<li>
+		<discordtxt>>setcargo @admin @everyone</discordtxt>
+		</li>
+		<br>
+		atribui o cargo "admin" para todos os usuarios do servidor
+	</ul>
+	<br><br><br>
+	<h2>>rmcargo</h2>
+		<h3>parametros: <parm>Cargo</parm> c, <parm>*Usuario(s)</parm> u</h3>
+		<h3>requer permissões: Gerenciar cargos</h3>
+	<hr>
+		remove o <parm>Cargo</parm> "c" de um ou mais <parm>Usuario(s)</parm> "u" <br />
+		*se o parametro de <parm>Usuario</parm> "u" for substituido por @everyone, todos os usuarios do servidor perderão o <parm>Cargo</parm> "c"
+		<h4>Uso:</h4>
+		<ul>
+			<li>
+			<discordtxt>>rmcargo @admin @usuario1 @usuario2</discordtxt>
+			</li>
+			<br>
+			remove o cargo "admin" do usuario1 e usuario2
+			<br>
+			<br>
+			<li>
+			<discordtxt>>rmcargo @admin @everyone</discordtxt>
+			</li>
+			<br>
+			remove o cargo "admin" de todos os usuarios do servidor
+		</ul>
+	<br><br><br>
+	<h2>>spam</h2>
+		<h3>parametros: <parm>Usuario</parm> u, <parm>Inteiro</parm> n</h3>
+		<h3>requer permissões: Administrador</h3>
+	<hr>
+		envia "n" mensagens privadas para o <parm>Usuario</parm> "u"
+		<h4>Uso:</h4>
+		<ul>
+			<li>
+			<discordtxt>>spam @usuario1 4</discordtxt>
+			</li>
+			<br>
+			envia 4 mensagens privadas ao usuario1
+		</ul>
+
+	<br><br><br>
+		<h2>>msgall</h2>
+			<h3>parametros: nenhum</h3>
+			<h3>requer permissões: Administrador</h3>
+		<hr>
+			envia uma mensagem privada para todos os usuarios do servidor
+		</ul>
+
+	<br><br><br>
+		<h2>>ban</h2>
+			<h3>parametros: <parm>Usuario</parm> u, <parm>Inteiro</parm> t</h3>
+			<h3>requer permissões: Administrador</h3>
+		<hr>
+			bane o <parm>Usuario</parm> "u" do servidor após "t" segundos
+			<h4>Uso:</h4>
+			<ul>
+				<li>
+				<discordtxt>>ban @usuario1 60</discordtxt>
+				</li>
+				<br>
+				bane o usuario1 apos 1 minuto
+		</ul>
+	</smallheight>
+	</body>
+</html>

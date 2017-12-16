@@ -7,7 +7,7 @@
 *.user
 *.userosscache
 *.sln.docstates
-
+RonoBot/token.txt
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
