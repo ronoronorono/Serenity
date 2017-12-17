@@ -292,11 +292,13 @@ namespace RonoBot.Modules
             }
         }
         
-        /*[Command("help")]
-        public async Task HelpAsync(SocketCommandContext cmd)
+        [Command("help")]
+        public async Task HelpAsync()
         {
-            
-        }*/
+            await Context.Channel.SendMessageAsync("Meus comandos: " +
+                "\n\n" +
+                "http://htmlpreview.github.io/?https://github.com/ronoronorono/Serenity/blob/master/Commands.html");
+        }
 
 
         private static IUser ThisIsMe;
