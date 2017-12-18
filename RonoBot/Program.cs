@@ -46,7 +46,7 @@ namespace RonoBot
             _client.UserJoined += AnnounceUserJoined;
             _client.UserBanned += AnnounceUserBanned;
             
-
+            
             
 
             await RegisterCommandsAsync();
@@ -124,8 +124,16 @@ namespace RonoBot
                     var context = new SocketCommandContext(_client, message);
 
                     var result = await _commands.ExecuteAsync(context, argPos, _services);
+                    //>spam
+                    if (!result.IsSuccess && message.Content.Substring(0, 5) == ">spam")
+                    {
+                        string[] tokens = message.Content.Split(' ');
 
-                    if (!result.IsSuccess)
+                        await message.Channel.SendMessageAsync($"Usuario '"+tokens[1]+"' não encontrado, talvez você esteja com algum " +
+                        $"dos sintomas de esquizofrenia?" +
+                        $"\n\nTalvez esse site possa te ajudar: http://schizophrenia.com/diag.html");
+                    }
+                    else if (!result.IsSuccess)
                         Console.WriteLine(result.ErrorReason);
                 }
                 else if (CustomReactions.Contains(message.Content.ToUpper()))
@@ -136,8 +144,8 @@ namespace RonoBot
 
                     if (message.Author.Id == 223895935539740672)
                         await message.Channel.SendMessageAsync("Saudações mestre.");
-                    else if (message.Author.Id == 206208126171611137)
-                        await message.Channel.SendMessageAsync("Você é patético.");
+                   // else if (message.Author.Id == 206208126171611137)
+                     //   await message.Channel.SendMessageAsync("Você é patético.");
                     else
                     {
                         int idx = rnd.Next(4);
