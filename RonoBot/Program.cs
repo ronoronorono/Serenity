@@ -15,8 +15,8 @@ namespace RonoBot
     class Program
     {
         //Serenity is a discord bot written in C# with the purpose of testing and entertainment
-        //I dont expect her to be used anywhere so the commands are very specific to the current server i am 
-        //currently hosting
+        //I dont expect her to be used anywhere so the commands are very specific to the current server i own
+        //
         //However depending on how far i end up developing this bot, i might make her able to be used in any server.
         static void Main(string[] args) => new Program().RunBotAsync().GetAwaiter().GetResult();
 
