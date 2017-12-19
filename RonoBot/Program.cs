@@ -14,6 +14,10 @@ namespace RonoBot
 {
     class Program
     {
+        //Serenity is a discord bot written in C# with the purpose of testing and entertainment
+        //I dont expect her to be used anywhere so the commands are very specific to the current server i am 
+        //currently hosting
+        //However depending on how far i end up developing this bot, i might make her able to be used in any server.
         static void Main(string[] args) => new Program().RunBotAsync().GetAwaiter().GetResult();
 
         private DiscordSocketClient _client;
@@ -31,23 +35,19 @@ namespace RonoBot
                 .AddSingleton(_commands)
                 .BuildServiceProvider();
 
-
+            //Reads the bot token from a local text file
             string token;
             var fs = new FileStream("token.txt", FileMode.Open, FileAccess.Read);
-
             using (var reader = new StreamReader(fs))
             {
                 token = reader.ReadLine();
             }
             String botToken = token;
 
-
+            //Log and UserJoined event handlers
             _client.Log += Log;
             _client.UserJoined += AnnounceUserJoined;
-            _client.UserBanned += AnnounceUserBanned;
-            
-            
-            
+         
 
             await RegisterCommandsAsync();
 
@@ -55,21 +55,12 @@ namespace RonoBot
 
             await _client.StartAsync();
 
-
-            //if (aboninga != null)
-            //await Dm(aboninga);
-
             await Task.Delay(-1);
 
 
         }
 
-        private async Task AnnounceUserBanned(SocketUser user, SocketGuild guild)
-        {
-            var aboninga = _client.GetChannel(391239397498159105) as SocketTextChannel; //gets channel to send message in
-            await aboninga.SendMessageAsync("Banido."); //Welcomes the new user
-        }
-
+        
         private async Task AnnounceUserJoined(SocketGuildUser user)
         {
             var guild = user.Guild;
@@ -85,8 +76,8 @@ namespace RonoBot
                 }
 
             await user.AddRoleAsync(carbon);
-            var aboninga = _client.GetChannel(391239397498159105) as SocketTextChannel; //gets channel to send message in
-            await aboninga.SendMessageAsync("Olá, " + user.Mention + " bem vindo(a)."); //Welcomes the new user
+            var aboninga = _client.GetChannel(391239397498159105) as SocketTextChannel; 
+            await aboninga.SendMessageAsync("Olá, " + user.Mention + " bem vindo(a)."); 
         }
         
     
@@ -105,6 +96,7 @@ namespace RonoBot
             await _commands.AddModulesAsync(Assembly.GetEntryAssembly());
         }
 
+
         private async Task HandleCommandAsync(SocketMessage arg)
         {
             var message = arg as SocketUserMessage;
@@ -113,29 +105,29 @@ namespace RonoBot
 
             int argPos = 0;
 
+            //This prevents the bot from answering commands when sent a private message.
             if (message.Channel.ToString() == "@" + message.Author.ToString())
             {
                 await message.Channel.SendMessageAsync($"Para de falar comigo, isso é estranho.");
             }
             else
             {
-                if (message.HasStringPrefix(">", ref argPos) || message.HasMentionPrefix(_client.CurrentUser, ref argPos))
+                //This is where the commands are handled, the default prefix being ">" 
+                if (message.HasStringPrefix(">", ref argPos)) //|| message.HasMentionPrefix(_client.CurrentUser, ref argPos))
                 {
                     var context = new SocketCommandContext(_client, message);
 
                     var result = await _commands.ExecuteAsync(context, argPos, _services);
-                    //>spam
-                    if (!result.IsSuccess && message.Content.Substring(0, 5) == ">spam")
+                    if (!result.IsSuccess && result.ErrorReason.ToString() == "User not found.")
                     {
-                        string[] tokens = message.Content.Split(' ');
-
-                        await message.Channel.SendMessageAsync($"Usuario '"+tokens[1]+"' não encontrado, talvez você esteja com algum " +
+                        await message.Channel.SendMessageAsync($"Usuario não encontrado, talvez você esteja com algum " +
                         $"dos sintomas de esquizofrenia?" +
                         $"\n\nTalvez esse site possa te ajudar: http://schizophrenia.com/diag.html");
                     }
                     else if (!result.IsSuccess)
                         Console.WriteLine(result.ErrorReason);
                 }
+                //This is currently a placeholder to handle bot reactions
                 else if (CustomReactions.Contains(message.Content.ToUpper()))
                 {
                     string[] possiblereacs = { "Oi", "Olá", "Saudações", "Oie"};
@@ -144,17 +136,11 @@ namespace RonoBot
 
                     if (message.Author.Id == 223895935539740672)
                         await message.Channel.SendMessageAsync("Saudações mestre.");
-                   // else if (message.Author.Id == 206208126171611137)
-                     //   await message.Channel.SendMessageAsync("Você é patético.");
                     else
                     {
                         int idx = rnd.Next(4);
                         await message.Channel.SendMessageAsync(possiblereacs[idx] + " "+message.Author.Mention);
                     }
-
-
-                    //if (!result.IsSuccess)
-                    //  Console.WriteLine(result.ErrorReason);
                 }
             }
 
