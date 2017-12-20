@@ -87,10 +87,19 @@ namespace RonoBot.Modules
         //a banned user cant be mentioned, thus the given string will be used to compare the
         //usernames that were banned until it finds the right one
         [Command("unban"),RequireUserPermission(GuildPermission.Administrator)]
-        public async Task UnbanAsync(String usr)
+        public async Task UnbanAsync(params String[] usr)
         {
             //Gets all the bans in the server
             var bans = Context.Guild.GetBansAsync().Result.ToArray();
+
+            String usrname = "";
+
+            for (int j = 0; j<usr.Length; j++)
+            {
+                usrname += usr[j] + " ";
+            }
+
+            usrname = usrname.Trim();
 
             //Begins searching through all the bans until it finds the one containing the 
             //specified username given as a string
@@ -98,8 +107,8 @@ namespace RonoBot.Modules
             {
                 //Begins comparing the given string with all the banned usernames,
                 //if the given string contains the mention prefix "@" it will still work.
-                if (bans[i].User.Username.ToString().ToLower() == usr.ToString().ToLower() 
-                    || "@"+bans[i].User.Username.ToString().ToLower() == usr.ToString().ToLower())
+                if (bans[i].User.Username.ToString().ToLower() == usrname.ToLower() 
+                    || "@"+bans[i].User.Username.ToString().ToLower() == usrname.ToLower())
                 {
                     //first, the banned user must be put into a placeholder since
                     //after the ban it will no longer exist within the server, so there
