@@ -11,8 +11,8 @@
 RonoBot/token.txt
 RonoBot/obj/
 RonoBot/bin/
-RonoBot/RonoBot/Credentials/
-RonoBot/RonoBot/SerenityCredentials.cs
+RonoBot/Credentials/
+RonoBot/SerenityCredentials.cs
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
