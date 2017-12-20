@@ -34,15 +34,10 @@ namespace RonoBot
                 .AddSingleton(_client)
                 .AddSingleton(_commands)
                 .BuildServiceProvider();
+            //Gets the bot token
+            SerenityCredentials token = new SerenityCredentials();
 
-            //Reads the bot token from a local text file
-            string token;
-            var fs = new FileStream("token.txt", FileMode.Open, FileAccess.Read);
-            using (var reader = new StreamReader(fs))
-            {
-                token = reader.ReadLine();
-            }
-            String botToken = token;
+            String botToken = token.BotToken;
 
             //Log and UserJoined event handlers
             _client.Log += Log;
