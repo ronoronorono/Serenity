@@ -7,6 +7,7 @@ using System;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Discord.Audio;
 using System.IO;
 
 
@@ -18,13 +19,14 @@ namespace RonoBot
         //I dont expect her to be used anywhere so the commands are very specific to the current server i own
         //
         //However depending on how far i end up developing this bot, i might make her able to be used in any server.
+
+
         static void Main(string[] args) => new Program().RunBotAsync().GetAwaiter().GetResult();
 
         private DiscordSocketClient _client;
         private CommandService _commands;
         private IServiceProvider _services;
         private string[] CustomReactions = { "OI" };
-
         public async Task RunBotAsync()
         {
             _client = new DiscordSocketClient();
@@ -108,6 +110,11 @@ namespace RonoBot
             else
             {
                 //This is where the commands are handled, the default prefix being ">" 
+
+                //Note that, as stated before, this bot is currently only being hosted on my personal server for test/entertainment
+                //purposes, so the response messages and how some commands are handled intends to be treated as a joke. Of course,
+                //the core purpose of the command will act as intended, for instance, the ban command will indeed ban a given user.
+
                 if (message.HasStringPrefix(">", ref argPos)) //|| message.HasMentionPrefix(_client.CurrentUser, ref argPos))
                 {
                     var context = new SocketCommandContext(_client, message);
