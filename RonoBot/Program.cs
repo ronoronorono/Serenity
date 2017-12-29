@@ -74,7 +74,7 @@ namespace RonoBot
 
             await user.AddRoleAsync(carbon);
             var aboninga = _client.GetChannel(391239397498159105) as SocketTextChannel; 
-            await aboninga.SendMessageAsync("Olá, " + user.Mention + " bem vindo(a)."); 
+            await aboninga.SendMessageAsync("Olá " + user.Mention + ", bem vindo(a)."); 
         }
         
     
