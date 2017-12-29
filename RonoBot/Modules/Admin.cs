@@ -18,10 +18,17 @@ namespace RonoBot.Modules
         [Command("ban", RunMode = RunMode.Async) ,RequireUserPermission(GuildPermission.Administrator)]
         public async Task BanAsync(SocketGuildUser usr, int t)
         {
+ 
             //The bot wont be able to ban itself nor its owner
             if (usr.Mention.ToString() == Context.Client.CurrentUser.Mention.ToString() || usr.Id == 223895935539740672)
             {
                 await Context.Channel.SendMessageAsync($"Haha boa tentativa.");
+                return;
+            }
+            else if (usr == Context.User) //User shouldn't be able to ban himself
+            {
+                await Context.Channel.SendMessageAsync($"Não seja bobo, " + Context.User.Mention);
+                return;
             }
             else
             {
@@ -75,6 +82,13 @@ namespace RonoBot.Modules
         [Command("ban"), RequireUserPermission(GuildPermission.Administrator)]
         public async Task BanAsync(SocketGuildUser usr)
         {
+            //User shouldn't be able to ban himself
+            if (usr == Context.User)
+            {
+                await Context.Channel.SendMessageAsync($"Não seja bobo, " + Context.User.Mention);
+                return;
+            }
+
             await Context.Guild.AddBanAsync(usr);
             await Context.Channel.SendMessageAsync($"Au revoir, {usr.Mention}" +
                 $"\n\nBanido.");
