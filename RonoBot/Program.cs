@@ -9,7 +9,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Discord.Audio;
 using System.IO;
-
+using RonoBot.Modules;
 
 namespace RonoBot
 {
@@ -25,16 +25,21 @@ namespace RonoBot
 
         private DiscordSocketClient _client;
         private CommandService _commands;
+        private AudioService _audio = new AudioService();
         private IServiceProvider _services;
         private string[] CustomReactions = { "OI" };
         public async Task RunBotAsync()
         {
+            int i = 0;
             _client = new DiscordSocketClient();
             _commands = new CommandService();
+            _audio = new AudioService();
+            Music music = new Music(_audio);
 
             _services = new ServiceCollection()
                 .AddSingleton(_client)
                 .AddSingleton(_commands)
+                .AddSingleton(_audio)
                 .BuildServiceProvider();
             //Gets the bot token
             SerenityCredentials token = new SerenityCredentials();

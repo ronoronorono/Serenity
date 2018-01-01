@@ -13,6 +13,8 @@ namespace RonoBot.Modules
     public class Admin : ModuleBase<SocketCommandContext>
     {
 
+
+
         //Bans given user after a certain ammount of time, maximum time is 60s
 
         [Command("ban", RunMode = RunMode.Async) ,RequireUserPermission(GuildPermission.Administrator)]
