@@ -18,45 +18,61 @@ namespace RonoBot.Modules
         public async Task JoinAudio(IGuild guild, IVoiceChannel target)
         {
             IAudioClient client;
+
+            //If the bot is already in a channel
             if (ConnectedChannels.TryGetValue(guild.Id, out client))
             {
                 return;
-            }
+            }           
             if (target.Guild.Id != guild.Id)
             {
                 return;
             }
+            //Finally, if the flow stops here, the bot will join the voice channel the user is in
             try
             {
                 var audioClient = await target.ConnectAsync();
+                //The channel is added to the concurrentdictionary for futher operations
+                ConnectedChannels.TryAdd(guild.Id, audioClient);
             }
             catch (Exception e)
             {
                 Console.WriteLine(e.Message.ToString());
             }
-            /*
-            if (ConnectedChannels.TryAdd(guild.Id, audioClient))
-            {
-                // If you add a method to log happenings from this service,
-                // you can uncomment these commented lines to make use of that.
-                //await Log(LogSeverity.Info, $"Connected to voice on {guild.Name}.");
-            }*/
         }
 
         public async Task LeaveAudio(IGuild guild)
         {
             IAudioClient client;
-            if (ConnectedChannels.TryRemove(guild.Id, out client))
-            {
+
+          if (ConnectedChannels.TryRemove(guild.Id, out client))
+          {
+                //Whenever a music playback starts, a ffmpeg process is created, thus, when the bot leaves
+                //he must close an instance of this process if it exists.
+                try
+                {
+                    foreach (Process proc in Process.GetProcessesByName("ffmpeg"))
+                    {
+                        proc.Kill();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message.ToString());
+                }
+
+
                 await client.StopAsync();
-                //await Log(LogSeverity.Info, $"Disconnected from voice on {guild.Name}.");
-            }
+          }
+            
         }
+
 
         public async Task SendAudioAsync(IGuild guild, IMessageChannel channel, string path)
         {
-            // Your task: Get a full path to the file if the value of 'path' is only a filename.
-            path = "C:/Users/NetWork/Desktop/DiscordBot/crazy.mp3";
+            //Currently this is just a test, the real intention is to turn this method
+            //into searching youtube for a given video and playing it
+            path = "C:/Users/NetWork/Desktop/DiscordBot/juno.mp3";
             if (!File.Exists(path))
             {
                 await channel.SendMessageAsync("File does not exist.");
@@ -65,16 +81,16 @@ namespace RonoBot.Modules
             IAudioClient client;
             if (ConnectedChannels.TryGetValue(guild.Id, out client))
             {
-                //await Log(LogSeverity.Debug, $"Starting playback of {path} in {guild.Name}");
                 using (var output = CreateStream(path).StandardOutput.BaseStream)
                 using (var stream = client.CreatePCMStream(AudioApplication.Music))
                 {
                     try { await output.CopyToAsync(stream); }
-                    finally { await stream.FlushAsync(); }
+                    finally { await stream.FlushAsync(); }      
                 }
             }
         }
 
+        //Creates the ffmpeg process...
         private Process CreateStream(string path)
         {
             return Process.Start(new ProcessStartInfo
@@ -84,6 +100,7 @@ namespace RonoBot.Modules
                 UseShellExecute = false,
                 RedirectStandardOutput = true
             });
+            
         }
     }
 }
