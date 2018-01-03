@@ -8,6 +8,16 @@
 *.user
 *.userosscache
 *.sln.docstates
+ffmpeg.exe
+ffplay.exe
+ffprobe.exe
+libsodium.dll
+opus.dll
+youtube-dl.exe
+libopus.dll
+libopus.dll.checksums
+libsodium.dll
+libsodium.dll.checksums
 RonoBot/token.txt
 RonoBot/obj/
 RonoBot/bin/
