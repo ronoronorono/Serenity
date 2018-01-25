@@ -30,7 +30,6 @@ namespace RonoBot
         private string[] CustomReactions = { "OI" };
         public async Task RunBotAsync()
         {
-            int i = 0;
             _client = new DiscordSocketClient();
             _commands = new CommandService();
             _audio = new AudioService();
@@ -58,7 +57,6 @@ namespace RonoBot
             await _client.StartAsync();
 
             await Task.Delay(-1);
-
 
         }
 
