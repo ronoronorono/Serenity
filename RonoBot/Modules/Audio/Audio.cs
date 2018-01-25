@@ -20,14 +20,14 @@ namespace RonoBot.Modules
             _service = service;
         }
 
-        [Command("join", RunMode = RunMode.Async),RequireOwner]
+        [Command("join", RunMode = RunMode.Async)]
         public async Task JoinCmd(IVoiceChannel channel = null)
         {
             await _service.JoinAudio(Context.Guild, (Context.User as IVoiceState).VoiceChannel, Context.User, Context.Channel);
         }
 
         
-        [Command("leave", RunMode = RunMode.Async), RequireOwner]
+        [Command("leave", RunMode = RunMode.Async)]
         public async Task LeaveCmd()
         {
             await _service.LeaveAudio(Context.Guild);
@@ -36,10 +36,19 @@ namespace RonoBot.Modules
             
         }
 
-        [Command("play", RunMode = RunMode.Async), RequireOwner]
+      /*  [Command("play", RunMode = RunMode.Async)]
         public async Task PlayCmd([Remainder] string song)
+        {        
+
+           // await _service.SendAudioAsyncYT(Context.Guild, Context.User, Context.Channel, song);
+
+        }*/
+
+        [Command("queue", RunMode = RunMode.Async)]
+        public async Task Queue([Remainder] string song)
         {
-            await _service.SendAudioAsyncYT(Context.Guild, Context.User, Context.Channel, song);
+
+            await _service.QueueAudio(Context.Guild, Context.User,  Context.Channel, (Context.User as IVoiceState).VoiceChannel, song);
 
         }
 
