@@ -18,8 +18,9 @@ libopus.dll
 libopus.dll.checksums
 libsodium.dll
 libsodium.dll.checksums
-RonoBot/token.txt
 RonoBot/obj/
+RonoBot/errors
+RonoBot/errors/
 RonoBot/bin/
 RonoBot/Credentials/
 RonoBot/SerenityCredentials.cs
