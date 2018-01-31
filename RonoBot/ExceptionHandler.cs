@@ -15,7 +15,7 @@ namespace RonoBot
         {
             DateTime dateTime = DateTime.UtcNow.Date;
             string excDay = dateTime.ToString("dd/MM/yyyy");
-            string excTime = DateTime.Now.Hour + ":" + DateTime.Now.Minute + ":" + DateTime.Now.Second;
+            string excTime = DateTime.Now.Hour + ":" + DateTime.Now.Minute + ":" + DateTime.Now.Millisecond;
 
             this.e = e;
             this.date = excDay;
@@ -32,25 +32,28 @@ namespace RonoBot
             string error = "";
             
             error += "OCORRIDO EM:";
-            error += date + "\n";
+            error += date + Environment.NewLine;
             error += "AS:";
-            error += time + "\n\n";
+            error += time + Environment.NewLine+ Environment.NewLine;
 
             error += "******************SOURCE******************";
-            error += "\n\n" + e.Source + "\n\n";
+            error += Environment.NewLine + Environment.NewLine + e.Source + Environment.NewLine + Environment.NewLine;
 
             error += "******************STACK TRACE******************";
-            error += "\n\n" + e.StackTrace + "\n\n";
-
-            error += "******************INNER EXCEPTION******************";
-            error += "\n\n" + e.InnerException + "\n\n";
+            error += Environment.NewLine + Environment.NewLine + e.StackTrace + Environment.NewLine + Environment.NewLine;
 
             error += "******************MESSAGE******************";
-            error += "\n\n" + e.Message + "\n\n";
+            error += Environment.NewLine + Environment.NewLine + e.Message + Environment.NewLine + Environment.NewLine;
 
-            string filename = "exception" + time + ".txt";
-
-            File.WriteAllText(@"C:\Users\NetWork\Desktop\DiscordBot\RonoBot\RonoBot\errors\"+filename, error);
+            string filename = "exception" + time.Replace(":","") + ".txt";
+            try
+            {
+                File.WriteAllText(@"C:\Users\NetWork\Desktop\DiscordBot\RonoBot\RonoBot\errors\" + filename, error);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
 
             ConsoleWarn("EXCEPTION OCCURRED, DETAILS IN C:/Users/NetWork/Desktop/DiscordBot/RonoBot/RonoBot/errors/" + filename);
         }
