@@ -15,9 +15,12 @@ namespace RonoBot.Modules
     {
         private readonly AudioService _service;
 
+        private static int currentID = 0;
+
         public Music(AudioService service)
         {
             _service = service;
+            currentID = _service.GetCurrentSongID();
         }
 
         [Command("join", RunMode = RunMode.Async)]
@@ -30,16 +33,27 @@ namespace RonoBot.Modules
         [Command("leave", RunMode = RunMode.Async)]
         public async Task LeaveCmd()
         {
-            await _service.LeaveAudio(Context.Guild);
+            await _service.LeaveAudio(Context.Guild, (Context.User as IVoiceState).VoiceChannel);
         }
 
-        [Command("queue", RunMode = RunMode.Async)]
+        [Command("queue")]
         [Alias("q")]
         public async Task Queue([Remainder] string song)
         {
-            await _service.QueueAudio(Context.Guild, Context.User,  Context.Channel, (Context.User as IVoiceState).VoiceChannel, song);
-            await Task.Delay(4999);
-            await Context.Message.DeleteAsync();
+            var embed =  _service.QueueAudio(Context.Guild, Context.User, Context.Channel, (Context.User as IVoiceState).VoiceChannel, song);
+            if (embed != null)
+                await Context.Channel.SendMessageAsync("", false, embed);
+
+            //This means this is the first song, thus it must begin playing it
+            if (_service.GetCurrentSongID() == 1)
+            {
+               Play();   
+            } 
+        }
+
+        public async Task Play()
+        {
+            await _service.SendAudioAsyncYT(Context.Guild, Context.Channel, (Context.User as IVoiceState).VoiceChannel, Context.User);
         }
 
         [Command("lq", RunMode = RunMode.Async)]
