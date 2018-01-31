@@ -101,6 +101,7 @@ namespace RonoBot
         {
             var message = arg as SocketUserMessage;
 
+            if (message.Source != MessageSource.User) return;
             if (message is null || message.Author.IsBot) return;
 
             int argPos = 0;
