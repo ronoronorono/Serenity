@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
+using System.Xml;
 
 namespace RonoBot.Modules.Audio
 {
@@ -19,7 +20,7 @@ namespace RonoBot.Modules.Audio
             SerenityCredentials api = new SerenityCredentials();
             //Starts the youtube service
             YouTubeService yt = new YouTubeService(new BaseClientService.Initializer() { ApiKey = api.GoogleAPIKey });
-
+       
             //Creates the search request
             var searchListRequest = yt.Search.List("snippet");
             SearchResult result = null;
@@ -48,6 +49,7 @@ namespace RonoBot.Modules.Audio
                     {
                         if (item.Snippet.LiveBroadcastContent == "none")
                         {
+                            GetVideoDuration(item.Id.VideoId);
                             return item;                        
                         }
                     }
@@ -63,6 +65,31 @@ namespace RonoBot.Modules.Audio
             return result;
         }
 
+        //The search result doesn't actually contain the video's duration, so we have to get
+        //it via a sepparate method
+        public string GetVideoDuration (string videoID)
+        {
+            SerenityCredentials api = new SerenityCredentials();
+            //Starts the youtube service
+            YouTubeService yt = new YouTubeService(new BaseClientService.Initializer() { ApiKey = api.GoogleAPIKey });
+            
+            var searchVideoRequest = yt.Videos.List("snippet,contentDetails");
+
+            searchVideoRequest.Id = videoID;
+            var res = searchVideoRequest.Execute();
+
+            TimeSpan t = XmlConvert.ToTimeSpan(res.Items[0].ContentDetails.Duration);
+            string dur = t.ToString();
+
+
+            if (dur.StartsWith("00:"))
+                dur = dur.Remove(0, 3);
+
+           
+            return dur;
+        }
+
+        /*
         public string[] YTDLYoutubeSearch (string query)
         {
             return GetVideoData(query);
@@ -90,7 +117,7 @@ namespace RonoBot.Modules.Audio
                 
                 return data;
             }
-        }
+        }*/
 
         public Process PlayYt(string url)
         {

@@ -267,7 +267,7 @@ namespace RonoBot.Modules
 
                 string url = "https://www.youtube.com/watch?v=" + newSong.Ytresult.Id.VideoId;
 
-                //string duration = newSong.Duration;
+                string duration = newSong.Duration;
 
                 //Embed that will be shown in the channel, containing details about the song that will be played
                 var embedQueue = new EmbedBuilder()
@@ -276,7 +276,7 @@ namespace RonoBot.Modules
                     .WithDescription("Busca: " + query)
                     .WithUrl(url)
                     .WithImageUrl(newSong.Ytresult.Snippet.Thumbnails.Default__.Url)
-                    .WithFooter(new EmbedFooterBuilder().WithText(newSong.RequestAuthor.Username.ToString() + " | "));//+ duration));       
+                    .WithFooter(new EmbedFooterBuilder().WithText(newSong.RequestAuthor.Username.ToString() + " | " + duration));       
 
                 return embedQueue;
             }

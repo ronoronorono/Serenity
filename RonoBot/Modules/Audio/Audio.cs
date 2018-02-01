@@ -33,7 +33,8 @@ namespace RonoBot.Modules
         [Command("leave", RunMode = RunMode.Async)]
         public async Task LeaveCmd()
         {
-            await _service.LeaveAudio(Context.Guild, (Context.User as IVoiceState).VoiceChannel);
+            _service.ClearQueue();
+            await _service.LeaveAudio(Context.Guild, (Context.User as IVoiceState).VoiceChannel);  
         }
 
         [Command("queue")]

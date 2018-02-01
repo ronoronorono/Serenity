@@ -25,29 +25,9 @@ namespace RonoBot.Modules.Audio
             this.query = query;
             this.order = order;
             this.requestAuthor = requestAuthor;
-           // this.duration = GetVideoDuration();
-        }
 
-        private string GetVideoDuration()
-        {
-            string url = "https://www.youtube.com/watch?v="+ ytresult.Id.VideoId;
-
-            using (Process process = new Process()
-            {
-                StartInfo = new ProcessStartInfo()
-                {
-                    FileName = "youtube-dl",
-                    Arguments = $"--skip-download --get-duration  {url}",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    CreateNoWindow = true,
-                },
-            })
-            {
-                process.Start();
-                var str = process.StandardOutput.ReadToEnd();
-                return str;
-            }
+            YTVideoOperation d = new YTVideoOperation();
+            this.duration = d.GetVideoDuration(ytresult.Id.VideoId);
         }
 
         public SearchResult Ytresult { get => ytresult; set => ytresult = value; }
