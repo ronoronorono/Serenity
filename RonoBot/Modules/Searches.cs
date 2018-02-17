@@ -21,23 +21,14 @@ namespace RonoBot.Modules
         //Searches for an image through the google search engine
         //selecting a random image from the 10 first found
         [Command("img")]
-        public async Task SearchImgAsync(params String[] input)
+        public async Task SearchImgAsync([Remainder] string search)
         {
  
-            //Getting both the API and custom search engine key needed to search the image.
-            SerenityCredentials google = new SerenityCredentials();
-            string apiKey = google.GoogleAPIKey;
-            string searchEngineId = google.CustomSearchEngineKey;
-            string search = "";
-            for (int i = 0; i < input.Length; i++)
-                search += input[i] + " ";
-
-            search = search.Trim();
-            var customSearchService = new CustomsearchService(new BaseClientService.Initializer { ApiKey = apiKey });
+            var customSearchService = new CustomsearchService(new BaseClientService.Initializer { ApiKey = SerenityCredentials.GoogleAPIKey() });
             
             var listRequest = customSearchService.Cse.List(search);
             Random rnd = new Random();
-            listRequest.Cx = searchEngineId;
+            listRequest.Cx = SerenityCredentials.CustomSearchEngineKey();
 
             //Restricting the search to only images
             listRequest.SearchType = CseResource.ListRequest.SearchTypeEnum.Image;
