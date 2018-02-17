@@ -100,19 +100,12 @@ namespace RonoBot.Modules
         //a banned user cant be mentioned, thus the given string will be used to compare the
         //usernames that were banned until it finds the right one
         [Command("unban"),RequireUserPermission(GuildPermission.Administrator)]
-        public async Task UnbanAsync(params String[] usr)
+        public async Task UnbanAsync([Remainder] string usrname)
         {
             //Gets all the bans in the server
             var bans = Context.Guild.GetBansAsync().Result.ToArray();
 
-            String usrname = "";
 
-            for (int j = 0; j<usr.Length; j++)
-            {
-                usrname += usr[j] + " ";
-            }
-
-            usrname = usrname.Trim();
 
             //Begins searching through all the bans until it finds the one containing the 
             //specified username given as a string
@@ -137,7 +130,7 @@ namespace RonoBot.Modules
             
             //In case the specified user hasn't been found the bot will send a message
             //saying given user isn't banned.
-            await Context.Channel.SendMessageAsync($"'{usr}' não está banido." +
+            await Context.Channel.SendMessageAsync($"'{usrname}' não está banido." +
                 $"\n\nMas não hesite, banir ele é tão simples.");
 
 
