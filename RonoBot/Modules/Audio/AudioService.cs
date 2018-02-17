@@ -21,6 +21,7 @@ namespace RonoBot.Modules
         private readonly ConcurrentDictionary<ulong, IAudioClient> ConnectedChannels = new ConcurrentDictionary<ulong, IAudioClient>();
 
         private Queue<YTSong> YTSearchResultSong = new Queue<YTSong>();
+        private MusicPlayer mp = new MusicPlayer();
 
         private static int currentSongID = 0;
 
@@ -288,6 +289,85 @@ namespace RonoBot.Modules
                 return null;
             }            
         }
+
+        public void testleave()
+        {
+            mp.StopSong();
+            mp.Clear();
+        }
+
+        public int testgetid()
+        {
+            return mp.CurrentSongID;
+        }
+
+        public int testsize()
+        {
+            return mp.ListSize();
+        }
+
+        public async Task testlistq(IMessageChannel channel)
+        {
+            mp.ListSongs(channel);
+        }
+
+        public async Task testqueue(string query, SocketUser usr, IMessageChannel channel)
+        {
+            
+            SearchResult Song = ytVideoOp.YoutubeSearch(query);
+            YTSong newSong = new YTSong(Song, query, mp.ListSize()+1, usr);
+
+
+            mp.Enqueue(newSong);
+
+            string url = newSong.GetUrl();
+           
+            var embedQueue = new EmbedBuilder()
+                   .WithColor(new Color(240, 230, 231))
+                   .WithTitle("#" + (newSong.Order) + "  " + newSong.Ytresult.Snippet.Title)
+                   .WithDescription("Busca: " + query)
+                   .WithUrl(url)
+                   .WithImageUrl(newSong.Ytresult.Snippet.Thumbnails.Default__.Url)
+                   .WithFooter(new EmbedFooterBuilder().WithText(newSong.RequestAuthor.Username.ToString() + " | " + newSong.Duration));
+            
+            channel.SendMessageAsync("", false, embedQueue);
+
+        }
+
+        public async Task testplay(IGuild guild, IVoiceChannel target, SocketUser usr, IMessageChannel channel)
+        {
+            IAudioClient client;
+            //If the bot isn't connected to any channel, it will attempt to join one before starting
+            //the music playback
+            if (!ConnectedChannels.TryGetValue(guild.Id, out client))
+            {
+                //Sometimes even after the bot disconnects, it will still remain in a voice
+                //channel, however without any audio outputs, so this is done in order to prevent
+                //a muted song being played
+                await LeaveAudio(guild, target);
+
+                await JoinAudio(guild, target, usr, channel);
+            }
+            if (ConnectedChannels.TryGetValue(guild.Id, out client))
+            {
+                try
+                {
+                    mp.AudioClient = client;
+                    mp.MessageChannel = channel;
+
+                    mp.Begin();
+                }
+                catch (OperationCanceledException)
+                {
+                    Console.WriteLine("DEAAAAAAAAAAAAAAAAAAAAAAAD");
+                }
+            }
+        }
+
+        public void MpStop()
+        {
+             mp.StopSong();
+        }
         
         public async Task SendAudioAsyncYT(IGuild guild, IMessageChannel channel, IVoiceChannel target, SocketUser usr)
         {
@@ -347,13 +427,16 @@ namespace RonoBot.Modules
                                 {
                                     try
                                     {
-                                        await channel.SendMessageAsync("", false, embedImg);
-                                        await output.CopyToAsync(stream);  
+                                    await channel.SendMessageAsync("", false, embedImg);
+                                        await output.CopyToAsync(stream);
+                                        
                                     }
                                     finally
                                     {
-                                        await stream.FlushAsync();//cts);   
-                                    }
+
+                                    await stream.FlushAsync();//cts);   
+
+                                    }   
                                 }
                             }
                             catch (Exception e)

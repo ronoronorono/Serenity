@@ -34,13 +34,15 @@ namespace RonoBot.Modules
         public async Task LeaveCmd()
         {
             _service.ClearQueue();
-            await _service.LeaveAudio(Context.Guild, (Context.User as IVoiceState).VoiceChannel);  
+            _service.testleave();
+            await _service.LeaveAudio(Context.Guild, (Context.User as IVoiceState).VoiceChannel);
         }
 
         [Command("queue")]
         [Alias("q")]
         public async Task Queue([Remainder] string song)
         {
+            /*
             var embed =  _service.QueueAudio(Context.Guild, Context.User, Context.Channel, (Context.User as IVoiceState).VoiceChannel, song);
             if (embed != null)
                 await Context.Channel.SendMessageAsync("", false, embed);
@@ -50,6 +52,14 @@ namespace RonoBot.Modules
             {
                Play();   
             } 
+            
+            */
+           await _service.testqueue(song, Context.User,Context.Channel);
+            if (_service.testsize() == 1)
+            {
+                _service.testplay(Context.Guild, (Context.User as IVoiceState).VoiceChannel,Context.User,Context.Channel);
+            }
+            
         }
 
         public async Task Play()
@@ -61,13 +71,15 @@ namespace RonoBot.Modules
         [Alias("listqueue")]
         public async Task ListQueue()
         {
-            await _service.ListQueue(Context.Channel, Context.User);
+            // await _service.ListQueue(Context.Channel, Context.User);
+
+            await _service.testlistq(Context.Channel);
         }
 
-        /* [Command("skip", RunMode = RunMode.Async)]
+         /*[Command("skip", RunMode = RunMode.Async)]
          public async Task Skip()
          {
-             await _service.SkipAudio(Context.Guild, Context.User, Context.Channel);
+            _service.MpStop();
          }*/
 
     }

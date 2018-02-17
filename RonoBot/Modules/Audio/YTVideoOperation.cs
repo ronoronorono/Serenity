@@ -19,7 +19,7 @@ namespace RonoBot.Modules.Audio
         {
             SerenityCredentials api = new SerenityCredentials();
             //Starts the youtube service
-            YouTubeService yt = new YouTubeService(new BaseClientService.Initializer() { ApiKey = api.GoogleAPIKey });
+            YouTubeService yt = new YouTubeService(new BaseClientService.Initializer() { ApiKey = SerenityCredentials.GoogleAPIKey() });
        
             //Creates the search request
             var searchListRequest = yt.Search.List("snippet");
@@ -69,9 +69,8 @@ namespace RonoBot.Modules.Audio
         //it via a sepparate method
         public string GetVideoDuration (string videoID)
         {
-            SerenityCredentials api = new SerenityCredentials();
             //Starts the youtube service
-            YouTubeService yt = new YouTubeService(new BaseClientService.Initializer() { ApiKey = api.GoogleAPIKey });
+            YouTubeService yt = new YouTubeService(new BaseClientService.Initializer() { ApiKey = SerenityCredentials.GoogleAPIKey() });
             
             var searchVideoRequest = yt.Videos.List("snippet,contentDetails");
 
@@ -87,6 +86,28 @@ namespace RonoBot.Modules.Audio
 
            
             return dur;
+        }
+
+        public string GetVideoURI (string videoURL)
+        {
+            using (Process process = new Process()
+            {
+                StartInfo = new ProcessStartInfo()
+                {
+                    FileName = "youtube-dl",
+                    Arguments = $"-4 --geo-bypass --no-check-certificate --skip-download -f bestaudio --get-url {videoURL}",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    CreateNoWindow = true,
+                },
+            })
+            {
+
+                process.Start();
+                string URI = process.StandardOutput.ReadToEnd().Replace("\n","");
+
+                return URI;
+            }
         }
 
         /*
@@ -118,15 +139,21 @@ namespace RonoBot.Modules.Audio
                 return data;
             }
         }*/
-
+        
         public Process PlayYt(string url)
         {
             Process currentsong = new Process();
 
+           
+
             currentsong.StartInfo = new ProcessStartInfo
             {
                 FileName = "cmd.exe",
+                //Arguments = $"/C youtube-dl.exe -4 --geo-bypass --no-check-certificate -f bestaudio -o - {url}| ffmpeg -i {url} -vn -ac 2 -f s16le -ar 48000 pipe:1",
                 Arguments = $"/C youtube-dl.exe -4 --geo-bypass --no-check-certificate -f bestaudio -o - {url}| ffmpeg -i pipe:0 -vn -ac 2 -f s16le -ar 48000 pipe:1",
+                /* Arguments = $"/C youtube-dl.exe -4 --geo-bypass --no-check-certificate -f bestaudio " +
+                 $"-o \"C:/Users/NetWork/Desktop/DiscordBot/RonoBot/RonoBot/song/%(title)s-%(id)s.%(ext)s\" {url} | " +
+                 $"ffmpeg -i pipe:0 -vn -ac 2 -f s16le -ar 48000 pipe:1",*/
                 //Arguments = $"/C youtube-dl.exe -4 -f bestaudio -o - ytsearch1:" +'"'+url+'"'+ " | ffmpeg -i pipe:0 -vn -ac 2 -f s16le -ar 48000 pipe:1",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
@@ -136,7 +163,7 @@ namespace RonoBot.Modules.Audio
             currentsong.Start();
             return currentsong;
         }
-
+        
         //Checks if a url is a valid youtube one, following discord url parameters
         //which require a https:// body
         //Although this method is not the most correct way of finding videos ID via a youtube
