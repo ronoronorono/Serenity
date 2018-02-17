@@ -40,10 +40,8 @@ namespace RonoBot
                 .AddSingleton(_commands)
                 .AddSingleton(_audio)
                 .BuildServiceProvider();
-            //Gets the bot token
-            SerenityCredentials token = new SerenityCredentials();
 
-            String botToken = token.BotToken;
+            String botToken = SerenityCredentials.BotToken();
 
             //Log and UserJoined event handlers
             _client.Log += Log;
