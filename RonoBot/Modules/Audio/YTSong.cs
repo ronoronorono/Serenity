@@ -18,7 +18,6 @@ namespace RonoBot.Modules.Audio
         //requested the song
         SocketUser requestAuthor;
         string duration;
-        string songURI;
 
         public YTSong(SearchResult ytresult, string query, int order, SocketUser requestAuthor)
         {
@@ -27,9 +26,7 @@ namespace RonoBot.Modules.Audio
             this.order = order;
             this.requestAuthor = requestAuthor;
 
-            YTVideoOperation d = new YTVideoOperation();
-            this.duration = d.GetVideoDuration(ytresult.Id.VideoId);
-            this.songURI = d.GetVideoURI(this.GetUrl());
+            this.duration = YTVideoOperation.GetVideoDuration(ytresult.Id.VideoId);
         }
 
         public YTSong(YTSong song)
@@ -39,7 +36,6 @@ namespace RonoBot.Modules.Audio
             this.order = song.Order;
             this.requestAuthor = song.RequestAuthor;
             this.duration = song.Duration;
-            this.songURI = song.songURI;
         }
 
         public SearchResult Ytresult { get => ytresult; set => ytresult = value; }
@@ -47,7 +43,6 @@ namespace RonoBot.Modules.Audio
         public int Order { get => order; set => order = value; }
         public SocketUser RequestAuthor { get => requestAuthor; set => requestAuthor = value; }
         public string Duration { get => duration; set => duration = value; }
-        public string SongUri { get => songURI; set => songURI = value; }
         public string GetUrl ()
         {
             return "https://www.youtube.com/watch?v=" + Ytresult.Id.VideoId;
