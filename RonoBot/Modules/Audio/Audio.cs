@@ -34,7 +34,7 @@ namespace RonoBot.Modules
         public async Task LeaveCmd()
         {
             _service.ClearQueue();
-            _service.testleave();
+            _service.StopMusicPlayer();
             await _service.LeaveAudio(Context.Guild, (Context.User as IVoiceState).VoiceChannel);
         }
 
@@ -42,43 +42,26 @@ namespace RonoBot.Modules
         [Alias("q")]
         public async Task Queue([Remainder] string song)
         {
-            /*
-            var embed =  _service.QueueAudio(Context.Guild, Context.User, Context.Channel, (Context.User as IVoiceState).VoiceChannel, song);
-            if (embed != null)
-                await Context.Channel.SendMessageAsync("", false, embed);
-
-            //This means this is the first song, thus it must begin playing it
-            if (_service.GetCurrentSongID() == 1)
+             _service.QueueSong(song, Context.User,Context.Channel,Context.Guild);
+            if (_service.GetMPListSize() == 1)
             {
-               Play();   
-            } 
-            
-            */
-             _service.testqueue(song, Context.User,Context.Channel,Context.Guild);
-            if (_service.testsize() == 1)
-            {
-                Play();
+                _service.StartMusicPlayer(Context.Guild, (Context.User as IVoiceState).VoiceChannel, Context.User, Context.Channel);
             }
             
         }
         
         public async Task Play()
         {
-            await _service.testplay(Context.Guild, (Context.User as IVoiceState).VoiceChannel, Context.User, Context.Channel);
+            //await _service.testplay(Context.Guild, (Context.User as IVoiceState).VoiceChannel, Context.User, Context.Channel);
         }
 
-        /*public async Task Play()
-        {
-            await _service.SendAudioAsyncYT(Context.Guild, Context.Channel, (Context.User as IVoiceState).VoiceChannel, Context.User);
-        }*/
 
         [Command("lq", RunMode = RunMode.Async)]
         [Alias("listqueue")]
         public async Task ListQueue()
         {
-            // await _service.ListQueue(Context.Channel, Context.User);
 
-             _service.testlistq(Context.Channel);
+             _service.ListQueue(Context.Channel);
         }
 
          [Command("skip", RunMode = RunMode.Async)]

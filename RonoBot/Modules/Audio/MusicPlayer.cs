@@ -7,36 +7,31 @@ using Discord;
 using Discord.Audio;
 using System.Threading.Tasks;
 using System.Collections;
+using System.IO;
 
 namespace RonoBot.Modules.Audio
 {
     public class MusicPlayer
-    {
+    {       
         private List<YTSong> SongList = new List<YTSong>();
         public int CurrentSongID { get; set; } = 0;
         bool player = false;
         public IMessageChannel MessageChannel {get;set;}
         private object locker = new object();
+        private int bytesSent = 0;
         public IAudioClient AudioClient { get; set; }
-        private CancellationTokenSource SongCancelSource { get; set; } = new CancellationTokenSource();
+        private CancellationTokenSource SongCancelSource { get; set; }
 
-        public MusicPlayer()//IAudioClient ac)
-        {
-            //this.VoiceChannel = vc;
-            //this.AudioClient = ac;
-
-           
-        }
 
         public void Begin()
         {
             if (SongList.Count != 0)
             {
+                this.SongCancelSource = new CancellationTokenSource();
                 //CurrentSongID++;
                 Thread musicPlayer = new Thread(new ThreadStart(Play));
                 player = true;
                 musicPlayer.Start();
-                
             }
             else
                 Console.WriteLine("No song in queue");
@@ -101,7 +96,6 @@ namespace RonoBot.Modules.Audio
             }
 
             var i = 0;
-            //int i = 1;
 
             var embedList = new EmbedBuilder()
                   .WithColor(new Color(240, 230, 231));
@@ -132,59 +126,53 @@ namespace RonoBot.Modules.Audio
         }
 
         public bool NextSong()
-        {
-            if (CurrentSongID < SongList.Count - 1)
-            {
-                CurrentSongID++;
-                return true;
-            }
-
-            return false;
-                
+        {          
+            return (CurrentSongID < SongList.Count - 1);
         }
 
         public async void Play()
         {
             
-
             while (player)
             {
+                bytesSent = 0;
+                AudioOutStream pcm = null;
+                Stream songStream = null;
+
                 CancellationToken cancelToken;
                 lock (locker)
                 {
                     cancelToken = SongCancelSource.Token;
                 }
-                //IAudioClient client = AudioClient;
-
                 try
                 {
-                
-
-                    int blockSize = 3840;
                     // The size of bytes to read per frame; 1920 for mono
+                    int blockSize = 3840;
+                    
                     byte[] buffer = new byte[blockSize];
-                    //int byteCount;
-                    AudioOutStream pcm;
+                    
                     pcm = AudioClient.CreatePCMStream(AudioApplication.Music, bufferMillis: 500);
                     int bytesRead = 0;
-                    int _bytesSent = 0;
 
-                    YTVideoOperation uri = new YTVideoOperation();
-                    var b = PlaySong(CurrentSong().SongUri).StandardOutput.BaseStream;
+                    songStream = FFmpegProcess(YTVideoOperation.GetVideoURI(CurrentSong().GetUrl())).StandardOutput.BaseStream;
                     ShowCurrentSongEmbed();
-                    while ((bytesRead = b.Read(buffer, 0, 3840)) > 0)
-                    {
-                        /*byteCount = PlaySong("a").StandardOutput.BaseStream.Read(buffer, 0, 3840);
 
-                        if (byteCount == 0)
-                            break;*/
-                        await pcm.WriteAsync(buffer, 0, bytesRead).ConfigureAwait(false);
-                        unchecked { _bytesSent += bytesRead; }
-                        
-
-                        // client
+                    while ((bytesRead = songStream.Read(buffer, 0, 3840)) > 0)
+                    {                      
+                        await pcm.WriteAsync(buffer, 0, bytesRead,cancelToken).ConfigureAwait(false);
+                        unchecked { bytesSent += bytesRead; }
                     }
                    
+                   
+                }
+                catch (OperationCanceledException)
+                {
+                    Console.WriteLine("SONG CANCELED");
+                    player = false;
+                }
+                finally
+                {
+                    ShowSongEndedEmbed();
                     if (pcm != null)
                     {
                         var flushCancel = new CancellationTokenSource();
@@ -193,19 +181,18 @@ namespace RonoBot.Modules.Audio
                         await Task.WhenAny(flushDelay, pcm.FlushAsync(flushToken));
                         flushCancel.Cancel();
                         pcm.Dispose();
-                        b.Dispose();
-                        ShowSongEndedEmbed();
-                        if (!NextSong())
+                        songStream.Dispose();
+                        
+                        if (NextSong())
+                        {
+                            CurrentSongID++;
+                        }
+                        else
                         {
                             Clear();
                             player = false;
                         }
                     }
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine("SONG CANCELED" + e.Message);
-                    player = false;
                 }
                 
 
@@ -228,13 +215,23 @@ namespace RonoBot.Modules.Audio
      
         public void StopSong()
         {
-            //Stop = true;
             var cs = SongCancelSource;
             SongCancelSource = new CancellationTokenSource();
             cs.Cancel();
         }
 
-        public Process PlaySong(string URI)
+        public void Next()
+        {
+            StopSong();
+
+            //After a song is cancelled, the player boolean which keeps the while loop running,
+            //is set to false. In order to skip the current song we have to check if there's another one
+            //available and conveniently, the operation that does this also returns a boolean indicating
+            //whether there is one or not, thus we assign this boolean to the player.
+            player = NextSong();
+        }
+
+        public Process FFmpegProcess(string URI)
         {
             Process currentsong = new Process();          
             currentsong.StartInfo = new ProcessStartInfo

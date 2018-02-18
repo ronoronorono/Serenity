@@ -20,27 +20,14 @@ namespace RonoBot.Modules
     {
         private readonly ConcurrentDictionary<ulong, IAudioClient> ConnectedChannels = new ConcurrentDictionary<ulong, IAudioClient>();
 
-        private Queue<YTSong> YTSearchResultSong = new Queue<YTSong>();
         private MusicPlayer mp = new MusicPlayer();
 
-        private static int currentSongID = 0;
-
-        private CancellationTokenSource source = new CancellationTokenSource();
-
+        private static int songOrder = 0;
         private ExceptionHandler ehandler;
 
-        private YTVideoOperation ytVideoOp = new YTVideoOperation();
-
-        //private static bool first = false;
-
-        public int GetCurrentSongID()
+        public int SongOrder()
         {
-            return currentSongID;
-        }
-
-        public void IncrementID()
-        {
-            currentSongID++;
+            return songOrder = mp.ListSize() + 1;
         }
 
         public async Task JoinAudio(IGuild guild, IVoiceChannel target, SocketUser msgAuthor, IMessageChannel channel)
@@ -90,7 +77,7 @@ namespace RonoBot.Modules
                 ehandler = new ExceptionHandler(e);
                 ehandler.WriteToFile();
                 Console.WriteLine(e.Message);
-                ClearQueue();
+                MpStop();
                 await LeaveAudio(guild, target);
             }
         }
@@ -126,11 +113,6 @@ namespace RonoBot.Modules
 
         }
 
-        public void ClearQueue()
-        {
-            YTSearchResultSong.Clear();
-            currentSongID = 0;
-        }
 
         //kills any ffmpeg processes started by this program.
         public void Killffmpeg()
@@ -148,193 +130,58 @@ namespace RonoBot.Modules
             }
         }
 
-        /*public async Task SkipAudio (IGuild guild, SocketUser usr, IMessageChannel channel)
-        {
-            IAudioClient client;
-
-            //Queue<YTSearchObject> aux = new Queue<YTSearchObject>();
-
-            if (ConnectedChannels.TryGetValue(guild.Id, out client) && YTSearchResultSong.Count >= 1)
-            {
-
-
-                Killffmpeg();
-                //Removes current song
-                YTSearchObject skippedSong = YTSearchResultSong.Peek();
-
-                source.Cancel();
-                source = new CancellationTokenSource();
-                //cancelSong = false;
-
-                var embedSkip = new EmbedBuilder()
-                  .WithColor(new Color(240, 230, 231))
-                  .WithTitle("⏩ Skipped: " + skippedSong.Order+"# " + skippedSong.Ytresult.Snippet.Title)
-                  .WithUrl("https://www.youtube.com/watch?v=" + skippedSong.Ytresult.Id.VideoId)
-                  .WithImageUrl(skippedSong.Ytresult.Snippet.Thumbnails.Default__.Url)
-                  .WithFooter(new EmbedFooterBuilder().WithText("-" + usr.Username.ToString()));
-
-                await channel.SendMessageAsync("", false, embedSkip);
-
-               // YTSearchResultSong = new Queue<YTSearchObject>(aux);
-                //Plays the next song if it exists
-                if (YTSearchResultSong.Count >= 1)
-                {
-                    await SendAudioAsyncYT(guild, usr, channel, YTSearchResultSong.Peek(),source.Token);
-                }
-
-            }
-        }*/
-
-        public async Task ListQueue(IMessageChannel channel, SocketUser usr)
-        {
-            //If the queue is empty, warn users and return
-            if (YTSearchResultSong.Count < 1)
-            {
-                var embedL = new EmbedBuilder()
-                 .WithColor(new Color(240, 230, 231))
-                 .WithDescription("Nenhuma musica na lista");
-                await channel.SendMessageAsync("", false, embedL);
-                return;
-            }
-                
-
-            Queue<YTSong> aux = new Queue<YTSong>(YTSearchResultSong);
-
-            var embedList = new EmbedBuilder()
-                  .WithColor(new Color(240, 230, 231));
-
-            int innercount = 1;
-
-            while (aux.Count != 0)
-            {
-                YTSong song = aux.Dequeue();
-                EmbedFieldBuilder embedField = new EmbedFieldBuilder();
-
-                string url = "https://www.youtube.com/watch?v=" + song.Ytresult.Id.VideoId;
-
-                string duration = song.Duration;
-
-                string usrRequest = song.RequestAuthor.Username.ToString();
-
-                string title = song.Ytresult.Snippet.Title;
-                //First song has a special marker indicating that is the one currently playing,
-                //thats why the if/else clause
-                if (innercount == 1)
-                {
-                    embedField.WithName("#" + innercount + " - Atual")
-                              .WithIsInline(false)
-                              .WithValue("[" + title + "](" + url + ")\n"+ usrRequest +" | "+ duration);
-                              
-                }
-                else
-                {
-                    embedField.WithName("#" + innercount)
-                              .WithIsInline(false)
-                              .WithValue("[" + title + "](" + url + ")\n"+usrRequest + " | " + duration);
-                }
-
-                embedList.AddField(embedField);
-                innercount++;
-            }
-
-
-
-            await channel.SendMessageAsync("", false, embedList);
-        }
-
-        public EmbedBuilder QueueAudio(IGuild guild, SocketUser usr, IMessageChannel channel, IVoiceChannel target, string query)
-        {
-            try
-            {               
-                currentSongID++;
-
-                //Searches youtube with the given query and if results are found, they are inserted
-                //in the queue.
-                SearchResult Song = ytVideoOp.YoutubeSearch(query);
-
-                //If the result is null, that means no results were found
-                if (Song == null)
-                {
-                    currentSongID--;
-                    var embedNoSong = new EmbedBuilder()
-                       .WithColor(new Color(240, 230, 231))
-                       .WithDescription("Nenhum video encontrado");      
-
-                    return embedNoSong;
-                }
-
-                YTSong newSong = new YTSong(Song, query, currentSongID, usr);
-                YTSearchResultSong.Enqueue(newSong);
-
-                string url = "https://www.youtube.com/watch?v=" + newSong.Ytresult.Id.VideoId;
-
-                string duration = newSong.Duration;
-
-                //Embed that will be shown in the channel, containing details about the song that will be played
-                var embedQueue = new EmbedBuilder()
-                    .WithColor(new Color(240, 230, 231))
-                    .WithTitle("#" + (newSong.Order) + "  " + newSong.Ytresult.Snippet.Title)
-                    .WithDescription("Busca: " + query)
-                    .WithUrl(url)
-                    .WithImageUrl(newSong.Ytresult.Snippet.Thumbnails.Default__.Url)
-                    .WithFooter(new EmbedFooterBuilder().WithText(newSong.RequestAuthor.Username.ToString() + " | " + duration));       
-
-                return embedQueue;
-            }
-            catch(Exception e)
-            {
-                ehandler = new ExceptionHandler(e);
-                ehandler.WriteToFile();
-                ClearQueue();
-                return null;
-            }            
-        }
-
-        public void testleave()
+        public void StopMusicPlayer()
         {
             mp.StopSong();
             mp.Clear();
         }
 
-        public int testgetid()
+        public int GetMPCurSongID()
         {
             return mp.CurrentSongID;
         }
 
-        public int testsize()
+        public int GetMPListSize()
         {
             return mp.ListSize();
         }
 
-        public async Task testlistq(IMessageChannel channel)
+        public async void ListQueue(IMessageChannel channel)
         {
             mp.ListSongs(channel);
         }
 
-        public async Task testqueue(string query, SocketUser usr, IMessageChannel channel)
+        public async void QueueSong(string query, SocketUser usr, IMessageChannel channel,IGuild guild)
         {
-            
-            SearchResult Song = ytVideoOp.YoutubeSearch(query);
-            YTSong newSong = new YTSong(Song, query, mp.ListSize()+1, usr);
+
+            if ((usr as IVoiceState).VoiceChannel == null)
+            {
+                await channel.SendMessageAsync(usr.Mention + " você não está conectado em nenhum canal de voz");
+                return;
+            }
 
 
-            mp.Enqueue(newSong);
+            SearchResult Song = YTVideoOperation.YoutubeSearch(query);
+            int i = SongOrder();
 
-            string url = newSong.GetUrl();
-           
             var embedQueue = new EmbedBuilder()
-                   .WithColor(new Color(240, 230, 231))
-                   .WithTitle("#" + (newSong.Order) + "  " + newSong.Ytresult.Snippet.Title)
-                   .WithDescription("Busca: " + query)
-                   .WithUrl(url)
-                   .WithImageUrl(newSong.Ytresult.Snippet.Thumbnails.Default__.Url)
-                   .WithFooter(new EmbedFooterBuilder().WithText(newSong.RequestAuthor.Username.ToString() + " | " + newSong.Duration));
-            
+                .WithColor(new Color(240, 230, 231))
+                .WithTitle("#" + i + "  " + Song.Snippet.Title)
+                .WithDescription("Busca: " + query)
+                .WithUrl("https://www.youtube.com/watch?v=" + Song.Id.VideoId)
+                .WithImageUrl(Song.Snippet.Thumbnails.Default__.Url)
+                .WithFooter(new EmbedFooterBuilder().WithText(usr.Username + " | " + YTVideoOperation.GetVideoDuration(Song.Id.VideoId)));
+
             channel.SendMessageAsync("", false, embedQueue);
 
+
+            YTSong newSong = new YTSong(Song, query, i, usr);
+            mp.Enqueue(newSong);
+            
+           
         }
 
-        public async Task testplay(IGuild guild, IVoiceChannel target, SocketUser usr, IMessageChannel channel)
+        public async Task StartMusicPlayer(IGuild guild, IVoiceChannel target, SocketUser usr, IMessageChannel channel)
         {
             IAudioClient client;
             //If the bot isn't connected to any channel, it will attempt to join one before starting
@@ -350,25 +197,25 @@ namespace RonoBot.Modules
             }
             if (ConnectedChannels.TryGetValue(guild.Id, out client))
             {
-                try
-                {
                     mp.AudioClient = client;
                     mp.MessageChannel = channel;
-
                     mp.Begin();
-                }
-                catch (OperationCanceledException)
-                {
-                    Console.WriteLine("DEAAAAAAAAAAAAAAAAAAAAAAAD");
-                }
             }
+        }
+
+        public void MpNext()
+        {
+            mp.Next();
         }
 
         public void MpStop()
         {
-             mp.StopSong();
+            mp.StopSong();
         }
+
+        #region Old audio sending method
         
+        /*
         public async Task SendAudioAsyncYT(IGuild guild, IMessageChannel channel, IVoiceChannel target, SocketUser usr)
         {
             try
@@ -470,6 +317,9 @@ namespace RonoBot.Modules
                //todo
             }
         }
+        */
+        #endregion
     }
+    
 }
 
