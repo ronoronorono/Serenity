@@ -15,12 +15,12 @@ namespace RonoBot.Modules
     {
         private readonly AudioService _service;
 
-        private static int currentID = 0;
+        //private static int currentID = 0;
 
         public Music(AudioService service)
         {
             _service = service;
-            currentID = _service.GetCurrentSongID();
+           // currentID = _service.GetCurrentSongID();
         }
 
         [Command("join", RunMode = RunMode.Async)]
@@ -54,18 +54,23 @@ namespace RonoBot.Modules
             } 
             
             */
-           await _service.testqueue(song, Context.User,Context.Channel);
+             _service.testqueue(song, Context.User,Context.Channel,Context.Guild);
             if (_service.testsize() == 1)
             {
-                _service.testplay(Context.Guild, (Context.User as IVoiceState).VoiceChannel,Context.User,Context.Channel);
+                Play();
             }
             
         }
-
+        
         public async Task Play()
         {
-            await _service.SendAudioAsyncYT(Context.Guild, Context.Channel, (Context.User as IVoiceState).VoiceChannel, Context.User);
+            await _service.testplay(Context.Guild, (Context.User as IVoiceState).VoiceChannel, Context.User, Context.Channel);
         }
+
+        /*public async Task Play()
+        {
+            await _service.SendAudioAsyncYT(Context.Guild, Context.Channel, (Context.User as IVoiceState).VoiceChannel, Context.User);
+        }*/
 
         [Command("lq", RunMode = RunMode.Async)]
         [Alias("listqueue")]
@@ -73,14 +78,14 @@ namespace RonoBot.Modules
         {
             // await _service.ListQueue(Context.Channel, Context.User);
 
-            await _service.testlistq(Context.Channel);
+             _service.testlistq(Context.Channel);
         }
 
-         /*[Command("skip", RunMode = RunMode.Async)]
+         [Command("skip", RunMode = RunMode.Async)]
          public async Task Skip()
          {
-            _service.MpStop();
-         }*/
+            _service.MpNext();
+         }
 
     }
 }
