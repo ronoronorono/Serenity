@@ -11,11 +11,11 @@ namespace RonoBot.Modules.Audio
 {
     class YTVideoOperation
     {
-        private ExceptionHandler ehandler;
+        private static ExceptionHandler ehandler;
 
         //Starts a youtube search with the given query, will return null if no results are found
         //Always returns the first result.
-        public SearchResult YoutubeSearch(string query)
+        public static SearchResult YoutubeSearch(string query)
         {
             SerenityCredentials api = new SerenityCredentials();
             //Starts the youtube service
@@ -67,7 +67,7 @@ namespace RonoBot.Modules.Audio
 
         //The search result doesn't actually contain the video's duration, so we have to get
         //it via a sepparate method
-        public string GetVideoDuration (string videoID)
+        public static string GetVideoDuration (string videoID)
         {
             //Starts the youtube service
             YouTubeService yt = new YouTubeService(new BaseClientService.Initializer() { ApiKey = SerenityCredentials.GoogleAPIKey() });
@@ -88,7 +88,7 @@ namespace RonoBot.Modules.Audio
             return dur;
         }
 
-        public string GetVideoURI (string videoURL)
+        public static string GetVideoURI (string videoURL)
         {
             using (Process process = new Process()
             {
@@ -139,30 +139,7 @@ namespace RonoBot.Modules.Audio
                 return data;
             }
         }*/
-        
-        public Process PlayYt(string url)
-        {
-            Process currentsong = new Process();
-
-           
-
-            currentsong.StartInfo = new ProcessStartInfo
-            {
-                FileName = "cmd.exe",
-                //Arguments = $"/C youtube-dl.exe -4 --geo-bypass --no-check-certificate -f bestaudio -o - {url}| ffmpeg -i {url} -vn -ac 2 -f s16le -ar 48000 pipe:1",
-                Arguments = $"/C youtube-dl.exe -4 --geo-bypass --no-check-certificate -f bestaudio -o - {url}| ffmpeg -i pipe:0 -vn -ac 2 -f s16le -ar 48000 pipe:1",
-                /* Arguments = $"/C youtube-dl.exe -4 --geo-bypass --no-check-certificate -f bestaudio " +
-                 $"-o \"C:/Users/NetWork/Desktop/DiscordBot/RonoBot/RonoBot/song/%(title)s-%(id)s.%(ext)s\" {url} | " +
-                 $"ffmpeg -i pipe:0 -vn -ac 2 -f s16le -ar 48000 pipe:1",*/
-                //Arguments = $"/C youtube-dl.exe -4 -f bestaudio -o - ytsearch1:" +'"'+url+'"'+ " | ffmpeg -i pipe:0 -vn -ac 2 -f s16le -ar 48000 pipe:1",
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                CreateNoWindow = false
-            };
-
-            currentsong.Start();
-            return currentsong;
-        }
+             
         
         //Checks if a url is a valid youtube one, following discord url parameters
         //which require a https:// body
@@ -171,7 +148,7 @@ namespace RonoBot.Modules.Audio
         //While the youtube data api doesn't specify the specific size of a video ID, in cases where the length
         //were different, it always were larger by one digit and if you where to ommit said digit, you could still
         //find the video nevertheless
-        public bool IsValidYTUrl(string url)
+        public static bool IsValidYTUrl(string url)
         {
             if (url == "https://youtu.be/")
                 return false;
@@ -192,7 +169,7 @@ namespace RonoBot.Modules.Audio
 
         //Returns the ID of a youtube video from its url.
         //returns an empty string if the url is invalid
-        public string GetYTVideoID(string url)
+        public static string GetYTVideoID(string url)
         {
             string id = "";
 
@@ -201,7 +178,6 @@ namespace RonoBot.Modules.Audio
             {
                 if (url.Substring(0, 17) == "https://youtu.be/")
                     return url.Substring(17, 11);
-                //Not enterily necessary to check this case, however just to make sure...
                 else if (url.Substring(0, 32) == "https://www.youtube.com/watch?v=")
                     return url.Substring(32, 11);
 
