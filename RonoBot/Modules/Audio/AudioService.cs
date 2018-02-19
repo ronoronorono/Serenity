@@ -160,8 +160,18 @@ namespace RonoBot.Modules
                 return;
             }
 
+            //YTVideoOperation.GetVideoDuration("RjXU5feoqzc");
 
             SearchResult Song = YTVideoOperation.YoutubeSearch(query);
+
+            if (Song == null)
+            {
+                var embedL = new EmbedBuilder()
+                .WithColor(new Color(240, 230, 231))
+                .WithDescription("Nenhum resultado encontrado para: "+query);
+                await channel.SendMessageAsync("", false, embedL);
+                return;
+            }
             int i = SongOrder();
 
             var embedQueue = new EmbedBuilder()
