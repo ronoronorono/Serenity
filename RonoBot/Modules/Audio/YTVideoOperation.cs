@@ -25,8 +25,27 @@ namespace RonoBot.Modules.Audio
             var searchListRequest = yt.Search.List("snippet");
             SearchResult result = null;
 
+            //checks if the query is actually a valid youtube video url
             if (IsValidYTUrl(query))
-                query = GetYTVideoID(query);
+            {
+                //in this case, we will search for the video using its ID inside the url
+                var r = SearchVideoByID(GetYTVideoID(query));
+
+                //searching a video directly by its ID returns a video object, thus we must
+                //fill a search result object with the video's object content.
+                //of course we only fill the required fields.
+                SearchResult a = new SearchResult();
+                a.ETag = r.ETag;
+                a.Snippet = new SearchResultSnippet();
+                a.Snippet.Title = r.Snippet.Title;
+
+                a.Snippet.Thumbnails = r.Snippet.Thumbnails;
+                a.Id = new ResourceId();
+                a.Id.VideoId = r.Id.ToString();
+                
+                return a;
+            }
+
 
             //With the given query
             searchListRequest.Type = "video";
@@ -54,6 +73,8 @@ namespace RonoBot.Modules.Audio
                         }
                     }
                 }
+
+                return null;
 
             }
             catch (Exception e)
@@ -86,6 +107,21 @@ namespace RonoBot.Modules.Audio
 
            
             return dur;
+        }
+
+        public static Video SearchVideoByID(string videoID)
+        {
+            YouTubeService yt = new YouTubeService(new BaseClientService.Initializer() { ApiKey = SerenityCredentials.GoogleAPIKey() });
+
+            var searchVideoRequest = yt.Videos.List("snippet,contentDetails");
+
+            searchVideoRequest.Id = videoID;
+            var res = searchVideoRequest.Execute();
+
+            if (res.Items.Count == 0)
+                return null;
+
+            return res.Items[0];
         }
 
         public static string GetVideoURI (string videoURL)
@@ -165,6 +201,23 @@ namespace RonoBot.Modules.Audio
                     return true;
 
             return false;
+        }
+
+
+        //Removes everything from a youtube url except the video id
+        //for instance a url containing a specific time such as:
+        //https://www.youtube.com/watch?v=abcdefghijk&t=31s
+        //would be formatted to: https://www.youtube.com/watch?v=abcdefghijk
+        public static string FormatUrl(string url)
+        {
+            if (!IsValidYTUrl(url))
+                return null;
+
+            if (url.Substring(0, 17) == "https://youtu.be/")
+                return url.Substring(0, 28);
+
+            return url.Substring(0, 43);
+
         }
 
         //Returns the ID of a youtube video from its url.
