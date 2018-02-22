@@ -8,6 +8,7 @@ using Discord.Audio;
 using System.Threading.Tasks;
 using System.Collections;
 using System.IO;
+using Discord.Rest;
 
 namespace RonoBot.Modules.Audio
 {
@@ -121,7 +122,6 @@ namespace RonoBot.Modules.Audio
                 embedList.AddField(embedField);
                 i++;
             }
-
             await MessageChannel.SendMessageAsync("", false, embedList);
         }
 

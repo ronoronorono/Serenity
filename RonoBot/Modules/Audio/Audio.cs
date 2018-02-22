@@ -48,18 +48,11 @@ namespace RonoBot.Modules
             }
             
         }
-        
-        public async Task Play()
-        {
-            //await _service.testplay(Context.Guild, (Context.User as IVoiceState).VoiceChannel, Context.User, Context.Channel);
-        }
-
-
+    
         [Command("lq", RunMode = RunMode.Async)]
         [Alias("listqueue")]
         public async Task ListQueue()
         {
-
              _service.ListQueue(Context.Channel);
         }
 
