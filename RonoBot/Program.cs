@@ -25,15 +25,15 @@ namespace RonoBot
 
         private DiscordSocketClient _client;
         private CommandService _commands;
-        private AudioService _audio = new AudioService();
+        private AudioService _audio;
         private IServiceProvider _services;
-        private string[] CustomReactions = { "OI" };
+        private string[] Reactions = { "OI" };
         public async Task RunBotAsync()
         {
             _client = new DiscordSocketClient();
             _commands = new CommandService();
             _audio = new AudioService();
-            Music music = new Music(_audio);
+            //Music music = new Music(_audio);
 
             _services = new ServiceCollection()
                 .AddSingleton(_client)
@@ -57,19 +57,21 @@ namespace RonoBot
             await Task.Delay(-1);
 
         }
-
-        
+      
         private async Task AnnounceUserJoined(SocketGuildUser user)
         {
             var guild = user.Guild;
             var channel = guild.DefaultChannel;
 
             SocketRole[] roles = guild.Roles.ToArray<SocketRole>();
+
+            //Here we'll search for the "Carbon Based Lifeforms" role, which is the default role
+            //of this guild
             SocketRole carbon = null;
+
             for (int i = 0; i < roles.Length; i++)
                 if (roles[i].Id == 391245533747871756)
-                {
-                    Console.WriteLine(roles[i].ToString());
+                {                  
                     carbon = roles[i];
                 }
 
@@ -132,7 +134,7 @@ namespace RonoBot
                         Console.WriteLine(result.ErrorReason);
                 }
                 //This is currently a placeholder to handle bot reactions
-                else if (CustomReactions.Contains(message.Content.ToUpper()))
+                else if (Reactions.Contains(message.Content.ToUpper()))
                 {
                     string[] possiblereacs = { "Oi", "Olá", "Saudações", "Oie"};
                     Random rnd = new Random();
