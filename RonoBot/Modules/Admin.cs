@@ -84,8 +84,13 @@ namespace RonoBot.Modules
         [Command("ban"), RequireUserPermission(GuildPermission.Administrator)]
         public async Task BanAsync(SocketGuildUser usr)
         {
+            if (usr.Mention.ToString() == Context.Client.CurrentUser.Mention.ToString() || usr.Id == 223895935539740672)
+            {
+                await Context.Channel.SendMessageAsync($"Boa tentativa. \n\n Palmas para "+Context.User.Username+" que pensou que ia conseguir algo com a coisa mais óbvia possível");
+                return;
+            }
             //User shouldn't be able to ban himself
-            if (usr == Context.User)
+            if ( usr == Context.User)
             {
                 await Context.Channel.SendMessageAsync($"Não seja bobo, " + Context.User.Mention);
                 return;
@@ -104,11 +109,10 @@ namespace RonoBot.Modules
         {
             //Gets all the bans in the server
             var bans = Context.Guild.GetBansAsync().Result.ToArray();
-
-
-
+            
             //Begins searching through all the bans until it finds the one containing the 
             //specified username given as a string
+
             for (int i = 0; i<bans.Length; i++)
             {
                 //Begins comparing the given string with all the banned usernames,
@@ -137,7 +141,7 @@ namespace RonoBot.Modules
         }
 
        
-        //Removes the role of one more users
+        //Removes the role of one or more users
         [Command("rmcargo"), RequireUserPermission(GuildPermission.ManageRoles)]
         public async Task RemoveRoleAsync(IRole role, params SocketGuildUser[] user)
         {
