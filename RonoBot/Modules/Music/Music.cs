@@ -27,7 +27,8 @@ namespace RonoBot.Modules
 
         [Command("join", RunMode = RunMode.Async)]
         public async Task JoinCmd(IVoiceChannel channel = null)
-        {          
+        {
+            //YTVideoOperation.PlaylistSearch("PLI6GH_i0qhdN9wU9hQ2--xOz3BO_EZ1z3");
             await _service.JoinAudio(Context.Guild, (Context.User as IVoiceState).VoiceChannel, Context.User, Context.Channel);
         }
         
@@ -48,6 +49,20 @@ namespace RonoBot.Modules
                 _service.StartMusicPlayer(Context.Guild, (Context.User as IVoiceState).VoiceChannel, Context.User, Context.Channel);
             }
             
+        }
+
+        [Command("queueplaylist")]
+        [Alias("qpl")]
+        public async Task QueuePlaylist([Remainder] string song)
+        {
+            if (_service.GetMPListSize() == 0)
+            {
+                _service.QueuePlaylist(song, Context.User, Context.Channel, Context.Guild);        
+                _service.StartMusicPlayer(Context.Guild, (Context.User as IVoiceState).VoiceChannel, Context.User, Context.Channel);
+            }
+            else
+                _service.QueuePlaylist(song, Context.User, Context.Channel, Context.Guild);
+
         }
 
         [Command("nowplaying")]
@@ -117,6 +132,16 @@ namespace RonoBot.Modules
         public async Task ListQueue()
         {
              _service.ListQueue(Context.Channel);
+        }
+
+        [Command("listqueue", RunMode = RunMode.Async)]
+        [Alias("lq")]
+        public async Task ListQueue(int page)
+        {
+            if (page <= 0)
+                return;
+
+            _service.ListQueue(Context.Channel,page);
         }
 
         [Command("skip", RunMode = RunMode.Async)]
