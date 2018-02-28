@@ -144,6 +144,11 @@ namespace RonoBot.Modules
             mp.ListSongs(channel);           
         }
 
+        public async void ListQueue(IMessageChannel channel, int page)
+        {
+            mp.ListSongs(channel,page);
+        }
+
         public EmbedBuilder CurrentSongEmbed()
         {
             return mp.CurrentSongEmbed();
@@ -194,6 +199,43 @@ namespace RonoBot.Modules
             mp.Enqueue(newSong);
             
            
+        }
+
+        public async void QueuePlaylist(string playlistUrl, SocketUser usr, IMessageChannel channel, IGuild guild)
+        {
+            if ((usr as IVoiceState).VoiceChannel == null)
+            {
+                await channel.SendMessageAsync(usr.Mention + " você não está conectado em nenhum canal de voz");
+                return;
+            }
+
+            PlaylistItem[] songs = YTVideoOperation.PlaylistSearch(YTVideoOperation.TryParsePlaylistID(playlistUrl).ID);
+
+            var embedA = new EmbedBuilder()
+               .WithColor(new Color(240, 230, 231))
+               .WithDescription("Carregando playlist...");
+            await channel.SendMessageAsync("", false, embedA);
+
+            for (int i = 0; i < songs.Length; i++)
+            {
+                SearchResult s = new SearchResult();
+
+                s.Snippet = new SearchResultSnippet();
+                s.Snippet.Title = songs[i].Snippet.Title;
+                s.Snippet.Thumbnails = songs[i].Snippet.Thumbnails;
+
+                s.Id = new ResourceId();
+                s.Id.VideoId = songs[i].Snippet.ResourceId.VideoId;
+
+
+                YTSong playlistSong = new YTSong(s, "playlist", SongOrder(), usr);
+                mp.Enqueue(playlistSong);
+            }
+
+            var embedB = new EmbedBuilder()
+           .WithColor(new Color(240, 230, 231))
+           .WithDescription("Playlist carregada");
+            await channel.SendMessageAsync("", false, embedB);
         }
 
         public async Task StartMusicPlayer(IGuild guild, IVoiceChannel target, SocketUser usr, IMessageChannel channel)
