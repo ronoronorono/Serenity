@@ -22,7 +22,7 @@ namespace RonoBot.Modules.Audio
         public IMessageChannel MessageChannel {get;set;}
         private object locker = new object();
         private int bytesSent = 0;
-
+        private bool error = false;
         const int _frameBytes = 3840;
         const float _miliseconds = 20.0f;
         public TimeSpan CurTime => TimeSpan.FromSeconds(bytesSent / (float)_frameBytes / (1000 / _miliseconds));
@@ -52,6 +52,7 @@ namespace RonoBot.Modules.Audio
                 bytesSent = 0;
                 AudioOutStream pcm = null;
                 Stream songStream = null;
+                Process ffmpeg = null;
 
                 CancellationToken cancelToken;
                 lock (locker)
@@ -67,17 +68,30 @@ namespace RonoBot.Modules.Audio
 
                     pcm = AudioClient.CreatePCMStream(AudioApplication.Music, bufferMillis: 500);
                     int bytesRead = 0;
+                    ffmpeg = FFmpegProcess(YTVideoOperation.GetVideoAudioURI(CurrentSong().GetUrl()));
 
-                    songStream = FFmpegProcess(YTVideoOperation.GetVideoAudioURI(CurrentSong().GetUrl())).StandardOutput.BaseStream;
-                    ShowSongStartEmbed();
+                    ffmpeg.Start();
+                    songStream = ffmpeg.StandardOutput.BaseStream;
+                    
 
-                    while ((bytesRead = songStream.Read(buffer, 0, 3840)) > 0)
+                    if (songStream.Read(buffer, 0, 3840) == 0)
                     {
-                        await pcm.WriteAsync(buffer, 0, bytesRead, cancelToken).ConfigureAwait(false);
-                        unchecked { bytesSent += bytesRead; }
+                        ShowSongNullEmbed();
+                        error = true;
+                        throw new OperationCanceledException();
                     }
 
+                    ShowSongStartEmbed();
+                  
+                    while ((bytesRead = songStream.Read(buffer, 0, 3840)) > 0)
+                    {
+                        
+                        await pcm.WriteAsync(buffer, 0, bytesRead, cancelToken).ConfigureAwait(false);
+                        unchecked { bytesSent += bytesRead; }
 
+                    }
+
+                    
                 }
                 catch (OperationCanceledException)
                 {
@@ -86,7 +100,11 @@ namespace RonoBot.Modules.Audio
                 }
                 finally
                 {
-                    ShowSongEndedEmbed();
+                    if (!error)
+                        ShowSongEndedEmbed();
+                    else
+                        error = false;
+
                     if (pcm != null)
                     {
                         var flushCancel = new CancellationTokenSource();
@@ -94,8 +112,12 @@ namespace RonoBot.Modules.Audio
                         var flushDelay = Task.Delay(1000, flushToken);
 
                         await Task.WhenAny(flushDelay, pcm.FlushAsync(flushToken));
-
                         flushCancel.Cancel();
+
+                        if (ffmpeg != null)
+                            ffmpeg.Dispose();
+
+                        
                         pcm.Dispose();
                         songStream.Dispose();
 
@@ -112,7 +134,6 @@ namespace RonoBot.Modules.Audio
                             else
                             {
                                 Clear();
-                                Playing = false;
                             }
                         }
                     }
@@ -121,6 +142,7 @@ namespace RonoBot.Modules.Audio
 
             }
         }
+
 
         public YTSong CurrentSong()
         {
@@ -228,6 +250,31 @@ namespace RonoBot.Modules.Audio
             await MessageChannel.SendMessageAsync("", false, embedCur);
         }
 
+        public async void ShowSongNullEmbed()
+        {
+
+            if (CurrentSong() == null)
+                return;
+
+            YTSong curSong = CurrentSong();
+
+            EmbedFieldBuilder songTitle = new EmbedFieldBuilder();
+
+            songTitle.WithName("** " + curSong.Order + " # **")
+                            .WithIsInline(false)
+                            .WithValue("[" + curSong.Ytresult.Snippet.Title + "](" + curSong.GetUrl() + ")" +
+                            "\n\n`" + curSong.RequestAuthor.Username + " | " + curSong.Duration + "`");
+
+            var embedCur = new EmbedBuilder()
+                       .WithColor(new Color(240, 230, 231))
+                       .WithAuthor(author => { author.WithName(" ❌ Erro na reprodução ").WithIconUrl("https://cdn.discordapp.com/avatars/390402848443203595/d2831182eb4d3177febd28f44b4ec936.png?size=256"); })
+                       .WithThumbnailUrl(curSong.Ytresult.Snippet.Thumbnails.Default__.Url);
+
+            embedCur.AddField(songTitle);
+            await MessageChannel.SendMessageAsync("", false, embedCur);
+        }
+
+
         public async void ShowSongEndedEmbed()
         {
             if (CurrentSong() == null)
@@ -244,6 +291,65 @@ namespace RonoBot.Modules.Audio
             await MessageChannel.SendMessageAsync("", false, embedEnd);
         }
 
+        public async void ListSongs(IMessageChannel channel, int page)
+        {
+            //Page enumeration works like an array, so pages actually start from 0,
+            int arrayPage = page - 1;
+
+            int pageRepresentation = page;
+            int pageCount = (ListSize() + 10 - 1) / 10;
+
+            if (SongList.Count < 1)
+            {
+                var embedL = new EmbedBuilder()
+                 .WithColor(new Color(240, 230, 231))
+                 .WithDescription("Nenhuma musica na lista");
+                await channel.SendMessageAsync("", false, embedL);
+                return;
+            }
+            else if (ListSize() <= arrayPage * 10)
+            {
+                var embedL = new EmbedBuilder()
+               .WithColor(new Color(240, 230, 231))
+               .WithDescription("Não é possível exibir a " + page + "ª pagina pois não há musicas suficientes");
+                await channel.SendMessageAsync("", false, embedL);
+                return;
+            }
+            
+
+           
+            var embedList = new EmbedBuilder()
+                  .WithColor(new Color(240, 230, 231))
+                  .WithFooter(new EmbedFooterBuilder().WithText("Pagina " + pageRepresentation + "/" + pageCount));
+
+            //10 Songs per page
+            var i = arrayPage * 10;
+            
+
+            while (i < SongList.Count && i < ((arrayPage*10) + 10))
+            {
+                EmbedFieldBuilder embedField = new EmbedFieldBuilder();
+
+                YTSong cur = SongList[i];
+
+                if (SongList[i] == SongList[CurrentSongID])
+                {
+                    embedField.WithName("`#" + (i + 1) + " - Atual `")
+                               .WithIsInline(false)
+                               .WithValue("[" + cur.Ytresult.Snippet.Title + "](" + cur.GetUrl() + ")\n\n`" + cur.RequestAuthor.Username + " | " + cur.Duration+"`");
+                }
+                else
+                {
+                    embedField.WithName("`#" + (i + 1)+"`")
+                               .WithIsInline(false)
+                               .WithValue("[" + cur.Ytresult.Snippet.Title + "](" + cur.GetUrl() + ")\n\n`" + cur.RequestAuthor.Username + " | " + cur.Duration+"`");
+                }
+                embedList.AddField(embedField);
+                i++;
+            }
+            await MessageChannel.SendMessageAsync("", false, embedList);
+        }
+
         public async void ListSongs(IMessageChannel channel)
         {
             if (SongList.Count < 1)
@@ -257,10 +363,15 @@ namespace RonoBot.Modules.Audio
 
             var i = 0;
 
-            var embedList = new EmbedBuilder()
-                  .WithColor(new Color(240, 230, 231));
+            int pageCount = (ListSize() + 10 - 1) / 10;
+            
 
-            while (i < SongList.Count)
+            var embedList = new EmbedBuilder()
+                  .WithColor(new Color(240, 230, 231))
+                  .WithFooter(new EmbedFooterBuilder().WithText("Pagina 1/" + pageCount ));
+
+            //Will only show the first page, each page contains 10 songs
+            while (i < SongList.Count && i < 10)
             {
                 EmbedFieldBuilder embedField = new EmbedFieldBuilder();
 
@@ -268,15 +379,15 @@ namespace RonoBot.Modules.Audio
 
                 if (SongList[i] == SongList[CurrentSongID])
                 {
-                    embedField.WithName("#" + (i+1) + " - Atual ")
+                    embedField.WithName("`#" + (i+1) + " - Atual `")
                                .WithIsInline(false)
-                               .WithValue("[" + cur.Ytresult.Snippet.Title + "](" + cur.GetUrl() + ")\n" + cur.RequestAuthor.Username + " | " + cur.Duration);
+                               .WithValue("[" + cur.Ytresult.Snippet.Title + "](" + cur.GetUrl() + ")\n\n`" + cur.RequestAuthor.Username + " | " + cur.Duration+"`");
                 }
                 else
                 {
-                    embedField.WithName("#" + (i+1))
+                    embedField.WithName("`#" + (i+1)+"`")
                                .WithIsInline(false)
-                               .WithValue("[" + cur.Ytresult.Snippet.Title + "](" + cur.GetUrl() + ")\n" + cur.RequestAuthor.Username + " | " + cur.Duration);
+                               .WithValue("[" + cur.Ytresult.Snippet.Title + "](" + cur.GetUrl() + ")\n\n`" + cur.RequestAuthor.Username + " | " + cur.Duration+"`");
                 }
                 embedList.AddField(embedField);
                 i++;
@@ -291,6 +402,7 @@ namespace RonoBot.Modules.Audio
     
         public void Clear()
         {
+            Playing = false;
             CurrentSongID = 0;
             SongList.Clear();
             AudioClient = null;
@@ -329,17 +441,17 @@ namespace RonoBot.Modules.Audio
 
         public Process FFmpegProcess(string URI)
         {
-            Process currentsong = new Process();          
+            Process currentsong = new Process();
             currentsong.StartInfo = new ProcessStartInfo
-            {               
+            {
                 FileName = "ffmpeg",
-                Arguments = $"-i \""+URI+"\" -vn -ac 2 -f s16le -ar 48000 pipe:1",
+                Arguments = $"-i \"" + URI + "\" -vn -ac 2 -f s16le -ar 48000 pipe:1 ",
                 UseShellExecute = false,
-                RedirectStandardOutput = true,
+                RedirectStandardOutput = true,      
                 CreateNoWindow = false
             };
-
-            currentsong.Start();
+     
+            //currentsong.Start();
             return currentsong;
         }
     }
