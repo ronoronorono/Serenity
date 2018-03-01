@@ -124,6 +124,11 @@ namespace RonoBot.Modules
             mp.Next();
         }
 
+        public void MpNext(int n)
+        {
+            mp.Next(n);
+        }
+
         public bool IsMPLooping()
         {
             return mp.LoopList;
@@ -171,10 +176,9 @@ namespace RonoBot.Modules
                 await channel.SendMessageAsync(usr.Mention + " você não está conectado em nenhum canal de voz");
                 return;
             }
+            Video video = YTVideoOperation.YoutubeSearch(query);
 
-            SearchResult Song = YTVideoOperation.YoutubeSearch(query);
-
-            if (Song == null)
+            if (video == null)
             {
                 var embedL = new EmbedBuilder()
                 .WithColor(new Color(240, 230, 231))
@@ -182,26 +186,23 @@ namespace RonoBot.Modules
                 await channel.SendMessageAsync("", false, embedL);
                 return;
             }
-            int i = SongOrder();
 
+            YTSong song = new YTSong(video, query, SongOrder(), usr);
+
+            mp.Enqueue(song);
             var embedQueue = new EmbedBuilder()
                 .WithColor(new Color(240, 230, 231))
-                .WithTitle("#" + i + "  " + Song.Snippet.Title)
+                .WithTitle("#" + song.Order + "  " + song.Title)
                 .WithDescription("Busca: " + query)
-                .WithUrl("https://www.youtube.com/watch?v=" + Song.Id.VideoId)
-                .WithImageUrl(Song.Snippet.Thumbnails.Default__.Url)
-                .WithFooter(new EmbedFooterBuilder().WithText(usr.Username + " | " + YTVideoOperation.GetVideoDuration(Song.Id.VideoId)));
+                .WithUrl(song.Url)
+                .WithImageUrl(song.DefaultThumbnailUrl)
+                .WithFooter(new EmbedFooterBuilder().WithText(song.RequestAuthor.Username + " | " + song.Duration));
 
             channel.SendMessageAsync("", false, embedQueue);
 
-
-            YTSong newSong = new YTSong(Song, query, i, usr);
-            mp.Enqueue(newSong);
-            
-           
         }
 
-        public async void QueuePlaylist(string playlistUrl, SocketUser usr, IMessageChannel channel, IGuild guild)
+        public async Task QueuePlaylist(string playlistUrl, SocketUser usr, IMessageChannel channel, IGuild guild, IVoiceChannel target)
         {
             if ((usr as IVoiceState).VoiceChannel == null)
             {
@@ -210,32 +211,60 @@ namespace RonoBot.Modules
             }
 
             PlaylistItem[] songs = YTVideoOperation.PlaylistSearch(YTVideoOperation.TryParsePlaylistID(playlistUrl).ID);
+            string[] audioURIs = new string[songs.Length];
+
 
             var embedA = new EmbedBuilder()
                .WithColor(new Color(240, 230, 231))
                .WithDescription("Carregando playlist...");
             await channel.SendMessageAsync("", false, embedA);
 
+            int unavailableVids = 0;
+            int x = 0;
+
             for (int i = 0; i < songs.Length; i++)
             {
-                SearchResult s = new SearchResult();
+                //Video video = YTVideoOperation.SearchVideoByID(songs[i].Snippet.ResourceId.VideoId);
 
-                s.Snippet = new SearchResultSnippet();
-                s.Snippet.Title = songs[i].Snippet.Title;
-                s.Snippet.Thumbnails = songs[i].Snippet.Thumbnails;
+                var song = songs[i];
 
-                s.Id = new ResourceId();
-                s.Id.VideoId = songs[i].Snippet.ResourceId.VideoId;
+                string uri = YTVideoOperation.GetVideoURIExplode(songs[i].Snippet.ResourceId.VideoId).Result;
 
+                if (uri == null)
+                    uri = YTVideoOperation.GetVideoAudioURI("https://www.youtube.com/watch?v=" + songs[i].Snippet.ResourceId.VideoId);
 
-                YTSong playlistSong = new YTSong(s, "playlist", SongOrder(), usr);
-                mp.Enqueue(playlistSong);
+                if (uri == null || uri == "")
+                {
+                    unavailableVids++;
+                }
+                else
+                {
+                    YTSong playlistSong = new YTSong(song.Snippet.Title,
+                                                     song.Snippet.Thumbnails.Default__.Url,
+                                                     song.Snippet.ResourceId.VideoId, uri, "playlist", SongOrder(), usr, YTVideoOperation.GetVideoDuration(song.Snippet.ResourceId.VideoId));
+                    mp.Enqueue(playlistSong);
+                    x++;
+                }
+
+                if (!mp.Playing)
+                    StartMusicPlayer(guild,target,usr,channel);
             }
 
-            var embedB = new EmbedBuilder()
-           .WithColor(new Color(240, 230, 231))
-           .WithDescription("Playlist carregada");
-            await channel.SendMessageAsync("", false, embedB);
+            if (unavailableVids == 0)
+            {
+                var embedAll = new EmbedBuilder()
+                  .WithColor(new Color(240, 230, 231))
+                  .WithDescription("Playlist carregada \n\n`Todos os videos carregados ("+x+")`" );
+                await channel.SendMessageAsync("", false, embedAll);
+            }
+            else
+            {
+                var embedB = new EmbedBuilder()
+                  .WithColor(new Color(240, 230, 231))
+                  .WithDescription("Playlist carregada \n\n`✔ Videos carregados: " + x + " ❌ Videos indisponiveis: " + unavailableVids);
+                await channel.SendMessageAsync("", false, embedB);
+            }
+           
         }
 
         public async Task StartMusicPlayer(IGuild guild, IVoiceChannel target, SocketUser usr, IMessageChannel channel)
