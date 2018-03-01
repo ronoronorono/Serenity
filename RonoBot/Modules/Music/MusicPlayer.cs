@@ -68,7 +68,7 @@ namespace RonoBot.Modules.Audio
 
                     pcm = AudioClient.CreatePCMStream(AudioApplication.Music, bufferMillis: 500);
                     int bytesRead = 0;
-                    ffmpeg = FFmpegProcess(YTVideoOperation.GetVideoAudioURI(CurrentSong().GetUrl()));
+                    ffmpeg = FFmpegProcess(CurrentSong().AudioURI);
 
                     ffmpeg.Start();
                     songStream = ffmpeg.StandardOutput.BaseStream;
@@ -210,7 +210,7 @@ namespace RonoBot.Modules.Audio
 
             songTitle.WithName("Musica atual")
                             .WithIsInline(false)
-                            .WithValue("[" + curSong.Ytresult.Snippet.Title + "](" + curSong.GetUrl() + ")" +
+                            .WithValue("[" + curSong.Title + "](" + curSong.Url + ")" +
                             "\n\n" +"`"+ FormattedCurTime() + " / " + curSong.Duration + "`" +
                             "\n\n`Solicitada por:` " + curSong.RequestAuthor.Username);
 
@@ -218,7 +218,7 @@ namespace RonoBot.Modules.Audio
 
             var embed = new EmbedBuilder()
                 .WithColor(new Color(240, 230, 231))               
-                .WithThumbnailUrl(curSong.Ytresult.Snippet.Thumbnails.Default__.Url);
+                .WithThumbnailUrl(curSong.DefaultThumbnailUrl);
 
             embed.AddField(songTitle);
                 //.AddField(songTitle);
@@ -238,13 +238,13 @@ namespace RonoBot.Modules.Audio
 
             songTitle.WithName("** "+curSong.Order+" # **")
                             .WithIsInline(false)
-                            .WithValue("[" + curSong.Ytresult.Snippet.Title + "](" + curSong.GetUrl() + ")" +                            
+                            .WithValue("[" + curSong.Title + "](" + curSong.Url + ")" +                            
                             "\n\n`" + curSong.RequestAuthor.Username + " | " + curSong.Duration + "`");
 
             var embedCur = new EmbedBuilder()
                        .WithColor(new Color(240, 230, 231))
                        .WithAuthor(author => { author.WithName(" ♪ ♪ ").WithIconUrl("https://cdn.discordapp.com/avatars/390402848443203595/d2831182eb4d3177febd28f44b4ec936.png?size=256"); })
-                       .WithThumbnailUrl(curSong.Ytresult.Snippet.Thumbnails.Default__.Url);
+                       .WithThumbnailUrl(curSong.DefaultThumbnailUrl);
 
             embedCur.AddField(songTitle);
             await MessageChannel.SendMessageAsync("", false, embedCur);
@@ -262,13 +262,13 @@ namespace RonoBot.Modules.Audio
 
             songTitle.WithName("** " + curSong.Order + " # **")
                             .WithIsInline(false)
-                            .WithValue("[" + curSong.Ytresult.Snippet.Title + "](" + curSong.GetUrl() + ")" +
+                            .WithValue("[" + curSong.Title + "](" + curSong.Url + ")" +
                             "\n\n`" + curSong.RequestAuthor.Username + " | " + curSong.Duration + "`");
 
             var embedCur = new EmbedBuilder()
                        .WithColor(new Color(240, 230, 231))
                        .WithAuthor(author => { author.WithName(" ❌ Erro na reprodução ").WithIconUrl("https://cdn.discordapp.com/avatars/390402848443203595/d2831182eb4d3177febd28f44b4ec936.png?size=256"); })
-                       .WithThumbnailUrl(curSong.Ytresult.Snippet.Thumbnails.Default__.Url);
+                       .WithThumbnailUrl(curSong.DefaultThumbnailUrl);
 
             embedCur.AddField(songTitle);
             await MessageChannel.SendMessageAsync("", false, embedCur);
@@ -283,9 +283,9 @@ namespace RonoBot.Modules.Audio
             YTSong curSong = CurrentSong();
             var embedEnd = new EmbedBuilder()
                        .WithColor(new Color(240, 230, 231))
-                       .WithTitle(curSong.Order + "# " + curSong.Ytresult.Snippet.Title)
+                       .WithTitle(curSong.Order + "# " + curSong.Title)
                        .WithDescription("Fim.")
-                       .WithUrl(curSong.GetUrl())
+                       .WithUrl(curSong.Url)
                        .WithFooter(new EmbedFooterBuilder().WithText(curSong.RequestAuthor.Username + " | " + curSong.Duration)); ;
 
             await MessageChannel.SendMessageAsync("", false, embedEnd);
@@ -336,13 +336,13 @@ namespace RonoBot.Modules.Audio
                 {
                     embedField.WithName("`#" + (i + 1) + " - Atual `")
                                .WithIsInline(false)
-                               .WithValue("[" + cur.Ytresult.Snippet.Title + "](" + cur.GetUrl() + ")\n\n`" + cur.RequestAuthor.Username + " | " + cur.Duration+"`");
+                               .WithValue("[" + cur.Title + "](" + cur.Url + ")\n\n`" + cur.RequestAuthor.Username + " | " + cur.Duration+"`");
                 }
                 else
                 {
                     embedField.WithName("`#" + (i + 1)+"`")
                                .WithIsInline(false)
-                               .WithValue("[" + cur.Ytresult.Snippet.Title + "](" + cur.GetUrl() + ")\n\n`" + cur.RequestAuthor.Username + " | " + cur.Duration+"`");
+                               .WithValue("[" + cur.Title + "](" + cur.Url + ")\n\n`" + cur.RequestAuthor.Username + " | " + cur.Duration+"`");
                 }
                 embedList.AddField(embedField);
                 i++;
@@ -381,13 +381,13 @@ namespace RonoBot.Modules.Audio
                 {
                     embedField.WithName("`#" + (i+1) + " - Atual `")
                                .WithIsInline(false)
-                               .WithValue("[" + cur.Ytresult.Snippet.Title + "](" + cur.GetUrl() + ")\n\n`" + cur.RequestAuthor.Username + " | " + cur.Duration+"`");
+                               .WithValue("[" + cur.Title + "](" + cur.Url + ")\n\n`" + cur.RequestAuthor.Username + " | " + cur.Duration+"`");
                 }
                 else
                 {
                     embedField.WithName("`#" + (i+1)+"`")
                                .WithIsInline(false)
-                               .WithValue("[" + cur.Ytresult.Snippet.Title + "](" + cur.GetUrl() + ")\n\n`" + cur.RequestAuthor.Username + " | " + cur.Duration+"`");
+                               .WithValue("[" + cur.Title + "](" + cur.Url + ")\n\n`" + cur.RequestAuthor.Username + " | " + cur.Duration+"`");
                 }
                 embedList.AddField(embedField);
                 i++;
@@ -439,9 +439,25 @@ namespace RonoBot.Modules.Audio
                 Playing = NextSong();
         }
 
+        public void Next(int n)
+        {
+            StopSong();
+
+            
+            CurrentSongID += n-1;
+
+            //If the music player is set to loop we dont have to worry whether or not we should 
+            //check if there is a next song available.
+            if (LoopList)
+                Playing = true;
+            else
+                Playing = NextSong();
+        }
+
+
         public Process FFmpegProcess(string URI)
         {
-            Process currentsong = new Process();
+            Process currentsong = new Process();           
             currentsong.StartInfo = new ProcessStartInfo
             {
                 FileName = "ffmpeg",
