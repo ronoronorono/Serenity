@@ -3,11 +3,11 @@ using Google.Apis.Services;
 using Google.Apis.YouTube.v3.Data;
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Diagnostics;
 using System.Xml;
-using RonoBot.Modules.Audio;
-using System.Collections;
+using YoutubeExplode;
+using System.Threading.Tasks;
+using System.Linq;
 
 namespace RonoBot.Modules.Audio
 {
@@ -16,37 +16,21 @@ namespace RonoBot.Modules.Audio
     {
         //Starts a youtube search with the given query, will return null if no results are found
         //Returns the first result that matches certain criterias explained further on.
-        public static SearchResult YoutubeSearch(string query)
+        public static Video YoutubeSearch(string query)
         {
             //Starts the youtube service
             YouTubeService yt = new YouTubeService(new BaseClientService.Initializer() { ApiKey = SerenityCredentials.GoogleAPIKey() });
        
             //Creates the search request
             var searchListRequest = yt.Search.List("snippet");
-            SearchResult result = null;
-
+            
             //checks if the query is a youtube url
             //if it is, we will directly get the video's id
             //that is inside the url
             var res = TryParseID(query);
             if (res.Valid)
             {                
-                var r = SearchVideoByID(res.ID);
-
-                //fetching a video directly by its ID returns a video object, thus we must
-                //fill a search result object with the video's object content, since this method
-                //must return a search result. Of course, most of the fields wont be filled, 
-                //however we wont be using them.
-                SearchResult a = new SearchResult();
-
-                a.Snippet = new SearchResultSnippet();
-                a.Snippet.Title = r.Snippet.Title;
-                a.Snippet.Thumbnails = r.Snippet.Thumbnails;
-
-                a.Id = new ResourceId();
-                a.Id.VideoId = r.Id.ToString();
-                
-                return a;
+                return SearchVideoByID(res.ID);
             }
 
             //sets the search type and the query
@@ -62,7 +46,6 @@ namespace RonoBot.Modules.Audio
             {
                 //Starts the request
                 SearchListResponse searchRequest = searchListRequest.Execute();
-
                 //This means no results were encountered
                 if (searchRequest.Items.Count < 1)
                 {
@@ -76,9 +59,8 @@ namespace RonoBot.Modules.Audio
                         //This is where we deal with the live broadcast results
                         //we'll get the first item that has "none" set to the LiveBroadcastContent property,                        
                         if (item.Snippet.LiveBroadcastContent == "none")
-                        {
-                            GetVideoDuration(item.Id.VideoId);
-                            return item;                        
+                        {                
+                            return SearchVideoByID(item.Id.VideoId);                        
                         }
                     }
                 }
@@ -92,7 +74,7 @@ namespace RonoBot.Modules.Audio
             {
                 ExceptionHandler.WriteToFile(e);
             }
-            return result;
+            return null;
         }
 
         /*public static int PlaylistSize(string playlistID)
@@ -106,7 +88,7 @@ namespace RonoBot.Modules.Audio
         {
             YouTubeService yt = new YouTubeService(new BaseClientService.Initializer() { ApiKey = SerenityCredentials.GoogleAPIKey() });
 
-            var playlistItems = yt.PlaylistItems.List("snippet");
+            var playlistItems = yt.PlaylistItems.List("snippet,status,contentDetails");
             var nextPageToken = "";
 
             playlistItems.PlaylistId = playlistID;
@@ -131,7 +113,7 @@ namespace RonoBot.Modules.Audio
 
             while (nextPageToken != null)
             {
-                playlistItems = yt.PlaylistItems.List("snippet");
+                playlistItems = yt.PlaylistItems.List("snippet,status,contentDetails");
                 playlistItems.PlaylistId = playlistID;
                 playlistItems.MaxResults = 50;
                 playlistItems.PageToken = nextPageToken;
@@ -152,34 +134,33 @@ namespace RonoBot.Modules.Audio
             return videos;            
         }
 
-        //Since the search result object doesn't have the video's duration, we need the actual video object
-        public static string GetVideoDuration (string videoID)
+        
+        public static string FormatVideoDuration(string duration)
         {
-            //Gets the video object
-            Video video = SearchVideoByID(videoID);
-
             //Since a video's ID is unique to each one, we'll only get one result.
             //The time is given in the PT#MS#S format in XML, so we convert it
-            TimeSpan t = XmlConvert.ToTimeSpan(video.ContentDetails.Duration);
-            string duration = t.ToString();
+            TimeSpan t = XmlConvert.ToTimeSpan(duration);
+            string dur = t.ToString();
 
             //Minor formatting here, if a video has 03:00(3 minutes) of duration, it'll
             //be written as 00:03:00 and we dont need the first 3 characters
-            if (duration.StartsWith("00:"))
-                duration = duration.Remove(0, 3);
-           
-            return duration;
+            if (dur.StartsWith("00:"))
+                dur = dur.Remove(0, 3);
+
+            return dur;
         }
 
         public static Video SearchVideoByID(string videoID)
         {
             //Starts the youtube service
             YouTubeService yt = new YouTubeService(new BaseClientService.Initializer() { ApiKey = SerenityCredentials.GoogleAPIKey() });
-
+        
             //Starts a video search request, to return video objects
             var searchVideoRequest = yt.Videos.List("snippet,contentDetails");
 
+            
             //We'll search for the video directly with its ID
+            //searchVideoRequest.
             searchVideoRequest.Id = videoID;
             var res = searchVideoRequest.Execute();
 
@@ -191,31 +172,69 @@ namespace RonoBot.Modules.Audio
             return res.Items[0];
         }
 
+        public static string GetVideoDuration(string videoID)
+        {
+            //Starts the youtube service
+            YouTubeService yt = new YouTubeService(new BaseClientService.Initializer() { ApiKey = SerenityCredentials.GoogleAPIKey() });
+
+            //Starts a video search request, to return video objects
+            var searchVideoRequest = yt.Videos.List("contentDetails");
+
+
+            //We'll search for the video directly with its ID
+            //searchVideoRequest.
+            searchVideoRequest.Id = videoID;
+            var res = searchVideoRequest.Execute();
+
+            //If the ID is invalid
+            if (res.Items.Count == 0)
+                return null;
+
+            //Otherwise, since the ID is unique to each video, we'll always get exactly one result
+            return FormatVideoDuration(res.Items[0].ContentDetails.Duration);
+        }
+
         //Gets only the audio of a youtube video in a URI
-        //URI are pretty much like URL's however, they "identify" a specific resource,
-        //in this case the audio file inside a youtube video.
+        //using youtube-dl, a command-line program that downloads yt videos
+        //additional information about it can be found here: https://github.com/rg3/youtube-dl
         public static string GetVideoAudioURI (string videoURL)
         {
-            //We use youtube-dl, a command-line program that downloads yt videos
-            //additional information about it can be found here: https://github.com/rg3/youtube-dl
             using (Process process = new Process()
             {
                 StartInfo = new ProcessStartInfo()
                 {
                     FileName = "youtube-dl",
-                    Arguments = $"-4 --geo-bypass --no-check-certificate --skip-download -f bestaudio --get-url {videoURL}",
+                    Arguments = $"-4 --youtube-skip-dash-manifest --geo-bypass --no-check-certificate -f bestaudio --get-url {videoURL}",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
-                    CreateNoWindow = true,
+                    CreateNoWindow = false,
                 },
             })
             {
-
                 process.Start();
-                string URI = process.StandardOutput.ReadToEnd().Replace("\n","");
-
+                string URI = process.StandardOutput.ReadToEnd().Replace("\n", "");
+               
                 return URI;
             }
+        }
+
+        //Same as above but with YoutubeExplode
+        public static async Task<string> GetVideoURIExplode (string videoID)
+        {
+            try
+            {
+                var client = new YoutubeClient();
+                var info = await client.GetVideoMediaStreamInfosAsync(videoID);
+                var audio = info.Audio.OrderByDescending(x => x.Bitrate).FirstOrDefault();
+                return audio.Url;
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine(e.Message);
+                return null;
+            }
+
+            return null;
         }
 
         //Checks if a url is a valid youtube one, following discord url parameters
