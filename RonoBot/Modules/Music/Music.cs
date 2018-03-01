@@ -29,6 +29,7 @@ namespace RonoBot.Modules
         public async Task JoinCmd(IVoiceChannel channel = null)
         {
             //YTVideoOperation.PlaylistSearch("PLI6GH_i0qhdN9wU9hQ2--xOz3BO_EZ1z3");
+            await YTVideoOperation.GetVideoURIExplode("9teDD_nY-KU");
             await _service.JoinAudio(Context.Guild, (Context.User as IVoiceState).VoiceChannel, Context.User, Context.Channel);
         }
         
@@ -51,18 +52,13 @@ namespace RonoBot.Modules
             
         }
 
-        [Command("queueplaylist")]
+        [Command("queueplaylist", RunMode = RunMode.Async)]
         [Alias("qpl")]
         public async Task QueuePlaylist([Remainder] string song)
         {
-            if (_service.GetMPListSize() == 0)
-            {
-                _service.QueuePlaylist(song, Context.User, Context.Channel, Context.Guild);        
-                _service.StartMusicPlayer(Context.Guild, (Context.User as IVoiceState).VoiceChannel, Context.User, Context.Channel);
-            }
-            else
-                _service.QueuePlaylist(song, Context.User, Context.Channel, Context.Guild);
 
+                await _service.QueuePlaylist(song, Context.User, Context.Channel, Context.Guild, (Context.User as IVoiceState).VoiceChannel);        
+                        
         }
 
         [Command("nowplaying")]
@@ -149,6 +145,51 @@ namespace RonoBot.Modules
         public async Task Skip()
         {
              _service.MpNext();
+        }
+
+
+        // 0 1 2 3 4 
+        //     ^      
+        [Command("skip", RunMode = RunMode.Async)]
+        [Alias("next", "n", "s")]
+        public async Task Skip(int n)
+        {
+            int remainingSongs = _service.GetMPListSize() - (_service.GetMPCurSongID() + 1);
+
+            if (n == 0)
+            {
+                await Context.Channel.SendMessageAsync("0 músicas puladas <:hmm:273160805363482625>");
+                return;
+            }
+            else if (n < 0)
+            {
+                await Context.Channel.SendMessageAsync(n + " músicas puladas <:holy:273134467521052692>");
+                return;
+            }
+
+            if (n <= remainingSongs)
+                _service.MpNext(n);
+            else
+            {
+                switch(remainingSongs)
+                {
+                    case 0: await Context.Channel.SendMessageAsync("Impossível pular " + n + " música(s) já que não há " +
+                            "mais músicas para serem tocadas");
+                            break;
+
+                    case 1:
+                        await Context.Channel.SendMessageAsync("Impossível pular " + n + " música(s) já que existe apenas mais "
+                        + remainingSongs + " música para ser tocada");
+                        break;
+
+                    default:
+                        await Context.Channel.SendMessageAsync("Impossível pular " + n + " música(s) já que existem "
+                        + remainingSongs + " músicas para serem tocadas");
+                        break;
+                }
+               
+            }
+           
         }
 
     }
