@@ -17,13 +17,10 @@ namespace RonoBot.Modules
         private readonly ConcurrentDictionary<ulong, IAudioClient> ConnectedChannels = new ConcurrentDictionary<ulong, IAudioClient>();
 
         private MusicPlayer mp = new MusicPlayer();
-
-        private static int songOrder = 0; 
    
         public async Task JoinAudio(IGuild guild, IVoiceChannel target, SocketUser msgAuthor, IMessageChannel channel)
         {
             IAudioClient client;
-
             
             //If target's null, the user is not connected to a voice channel
             if (target == null)
@@ -76,8 +73,6 @@ namespace RonoBot.Modules
         {
             IAudioClient client;
 
-            var users = await guild.GetUsersAsync();
-
             //If the bot is connected to a voice channel and its inside the dictionary with the guild's id,
             //we can get the AudioClient from the dictionary and stop it
             if (ConnectedChannels.TryRemove(guild.Id, out client))
@@ -116,7 +111,7 @@ namespace RonoBot.Modules
 
         private int SongOrder()
         {
-            return songOrder = mp.ListSize() + 1;
+            return mp.ListSize() + 1;
         }
 
         public void MpNext()
@@ -187,7 +182,15 @@ namespace RonoBot.Modules
                 return;
             }
 
-            YTSong song = new YTSong(video, query, SongOrder(), usr);
+            //Attempts to get the audio URI either by YoutubeExplode or youtube-dl
+            //First attempt is with YoutubeExplode
+            string uri = YTVideoOperation.GetVideoURIExplode(video.Id).Result;
+
+            
+            if (uri == null)
+                uri = YTVideoOperation.GetVideoAudioURI("https://www.youtube.com/watch?v="+video.Id);
+
+            YTSong song = new YTSong(video,uri, query, SongOrder(), usr);
 
             mp.Enqueue(song);
             var embedQueue = new EmbedBuilder()
