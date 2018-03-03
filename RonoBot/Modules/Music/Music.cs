@@ -28,8 +28,6 @@ namespace RonoBot.Modules
         [Command("join", RunMode = RunMode.Async)]
         public async Task JoinCmd(IVoiceChannel channel = null)
         {
-            //YTVideoOperation.PlaylistSearch("PLI6GH_i0qhdN9wU9hQ2--xOz3BO_EZ1z3");
-            await YTVideoOperation.GetVideoURIExplode("9teDD_nY-KU");
             await _service.JoinAudio(Context.Guild, (Context.User as IVoiceState).VoiceChannel, Context.User, Context.Channel);
         }
         
@@ -45,7 +43,7 @@ namespace RonoBot.Modules
         public async Task Queue([Remainder] string song)
         {
              _service.QueueSong(song, Context.User,Context.Channel,Context.Guild);
-            if (_service.GetMPListSize() == 1)
+            if (!_service.IsPlaying())
             {
                 _service.StartMusicPlayer(Context.Guild, (Context.User as IVoiceState).VoiceChannel, Context.User, Context.Channel);
             }
@@ -56,18 +54,14 @@ namespace RonoBot.Modules
         [Alias("qpl")]
         public async Task QueuePlaylist([Remainder] string song)
         {
-
-                await _service.QueuePlaylist(song, Context.User, Context.Channel, Context.Guild, (Context.User as IVoiceState).VoiceChannel);        
-                        
+                await _service.QueuePlaylist(song, Context.User, Context.Channel, Context.Guild, (Context.User as IVoiceState).VoiceChannel);                                
         }
 
         [Command("nowplaying")]
         [Alias("np")]
         public async Task NowPlayingAsync()
-        {        
-            YTSong Song = _service.MPCurSong();
-
-            if (Song == null)
+        {                 
+            if (!_service.IsPlaying())
             {
                 await Context.Channel.SendMessageAsync("Não há nenhuma música tocando");
                 return;
@@ -112,7 +106,7 @@ namespace RonoBot.Modules
             //By default the loop feature is set to false
             _service.ToggleMPListLoop();
 
-            //If its true, it was toggled from false to true so we must warn that the loop setting is now on
+            //If its true, it was toggled from false so we must warn that the loop setting is now on
             if (_service.IsMPLooping())
             {
                 await SendDescriptionOnlyEmbed("Loop: ✔");
@@ -147,9 +141,6 @@ namespace RonoBot.Modules
              _service.MpNext();
         }
 
-
-        // 0 1 2 3 4 
-        //     ^      
         [Command("skip", RunMode = RunMode.Async)]
         [Alias("next", "n", "s")]
         public async Task Skip(int n)
