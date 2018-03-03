@@ -44,19 +44,13 @@ namespace RonoBot.Modules.Audio
             this.duration = duration;
         }
 
-        public YTSong(Video video,string query, int order, SocketUser requestAuthor)
+        public YTSong(Video video, string audioURI, string query, int order, SocketUser requestAuthor)
         {
             this.title = video.Snippet.Title;
             this.defaultThumbnailUrl = video.Snippet.Thumbnails.Default__.Url;
             this.videoID = video.Id;
             this.url = "https://www.youtube.com/watch?v=" + video.Id;
-
-            string uri = YTVideoOperation.GetVideoURIExplode(video.Id).Result;           
-            if (uri == null)
-                uri = YTVideoOperation.GetVideoAudioURI(this.url);
-
-
-            this.audioURI = uri;
+            this.audioURI = audioURI;
             this.query = query;
             this.order = order;
             this.requestAuthor = requestAuthor;
