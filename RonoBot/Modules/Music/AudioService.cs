@@ -9,6 +9,7 @@ using Discord.WebSocket;
 using RonoBot.Modules.Audio;
 using RonoBot;
 using System.Collections;
+using System.Threading;
 
 namespace RonoBot.Modules
 {
@@ -17,7 +18,40 @@ namespace RonoBot.Modules
         private readonly ConcurrentDictionary<ulong, IAudioClient> ConnectedChannels = new ConcurrentDictionary<ulong, IAudioClient>();
 
         private MusicPlayer mp = new MusicPlayer();
-   
+
+        private Object queueLock = new Object();
+
+        public bool Connected { get; set; } = false;
+
+        public bool firstSong = true;
+
+        public Boolean isOnVoice(IGuild guild)
+        {
+            IAudioClient client;
+
+            return (ConnectedChannels.TryGetValue(guild.Id, out client));
+        }
+
+        public bool getMPEnded()
+        {
+            return mp.ended;
+        }
+        //Determines whether the Music player is startable or not
+        public Boolean CanMPStart(IGuild guild)
+        {
+            if (isOnVoice(guild))
+            {
+                //Is connected to a voice channel however is already playing a song
+                if (isPlaying())
+                    return false;
+
+                return true;
+            }
+
+            //Isn't connected to a voice channel neither playing a song
+            return true;
+        }
+
         public async Task JoinAudio(IGuild guild, IVoiceChannel target, SocketUser msgAuthor, IMessageChannel channel)
         {
             IAudioClient client;
@@ -28,20 +62,7 @@ namespace RonoBot.Modules
                 await channel.SendMessageAsync(msgAuthor.Mention + ", você não está conectado(a) em nenhum canal de voz.");
                 return;
             }
-
-            //Sometimes when this application closes and the bot is still inside a voice channel,
-            //it will remain there even though its not even online anymore.
-            //In this case, we just have to reconnect to the voice channel the bot is currently on and
-            //add it to the dictionary.        
-            var serenity = guild.GetCurrentUserAsync().Result;
            
-            if (serenity.VoiceChannel != null)
-            {
-                client = await serenity.VoiceChannel.ConnectAsync();
-                ConnectedChannels.TryAdd(guild.Id, client);
-                return;
-            }
-
             //If the bot is already in a channel
             if (ConnectedChannels.TryGetValue(guild.Id, out client))
             {
@@ -53,25 +74,27 @@ namespace RonoBot.Modules
                 return;
             }
 
-            //If the execution reaches this part of the code, the bot will join the user's channel
+            //If the execution reaches this part of the code, the bot will join the user's channel-
             try
             {
-                var audioClient = await target.ConnectAsync();
-              
-                //The channel is added to the concurrentdictionary for futher operations
-                ConnectedChannels.TryAdd(guild.Id, audioClient);
+                    var audioClient = await target.ConnectAsync();
+                    Connected = true;
+                    //The channel is added to the concurrentdictionary for futher operations
+                    ConnectedChannels.TryAdd(guild.Id, audioClient);
             }
             catch (Exception e)
             {
-                ExceptionHandler.WriteToFile(e);      
-                StopMusicPlayer();
-                await LeaveAudio(guild, target);
+               // ExceptionHandler.WriteToFile(e);      
+                //StopMusicPlayer();
+               // await LeaveAudio(guild, target);
             }
         }
 
         public async Task LeaveAudio(IGuild guild, IVoiceChannel target)
         {
             IAudioClient client;
+
+           // Connected = false;
 
             //If the bot is connected to a voice channel and its inside the dictionary with the guild's id,
             //we can get the AudioClient from the dictionary and stop it
@@ -81,8 +104,10 @@ namespace RonoBot.Modules
                 return;
             }
 
-            //As said above in the JoinAudio method, sometimes the bot will remain in a voice channel
-            //even after the application has closed and it disconnected from discord
+            //Sometimes the bot will remain in a voice channel
+            //even after the application has closed and it disconnected from discord, so we need to remove
+            //the connection directly.
+
             var serenity = guild.GetCurrentUserAsync().Result;
             if (serenity.VoiceChannel != null)
             {
@@ -96,7 +121,8 @@ namespace RonoBot.Modules
         public void StopMusicPlayer()
         {
             mp.StopSong();
-            mp.Clear();
+            //MpStarted = false;
+            //mp.Clear();
         }
 
         public int GetMPCurSongID()
@@ -109,29 +135,29 @@ namespace RonoBot.Modules
             return mp.ListSize();
         }
 
+        public bool isPlaying()
+        {
+            return mp.Playing;
+        }
+
         private int SongOrder()
         {
             return mp.ListSize() + 1;
         }
 
-        public void MpNext()
+        public void MpNext(SocketUser usr)
         {
-            mp.Next();
+            mp.Next(usr);
         }
 
-        public void MpNext(int n)
+        public void MpNext(int n,SocketUser usr)
         {
-            mp.Next(n);
+            mp.Next(n,usr);
         }
 
         public bool IsMPLooping()
         {
             return mp.LoopList;
-        }
-
-        public bool IsPlaying()
-        {
-            return mp.Playing;
         }
 
         public void ToggleMPListLoop()
@@ -141,12 +167,18 @@ namespace RonoBot.Modules
 
         public async void ListQueue(IMessageChannel channel)
         {
-            mp.ListSongs(channel);           
+            var tempChannel = mp.MessageChannel;
+            mp.MessageChannel = channel;
+            mp.ListSongs(channel);
+            mp.MessageChannel = tempChannel;
         }
 
         public async void ListQueue(IMessageChannel channel, int page)
         {
+            var tempChannel = mp.MessageChannel;
+            mp.MessageChannel = channel;
             mp.ListSongs(channel,page);
+            mp.MessageChannel = tempChannel;
         }
 
         public EmbedBuilder CurrentSongEmbed()
@@ -164,7 +196,7 @@ namespace RonoBot.Modules
             return mp.BytesSent();
         }
 
-        public async void QueueSong(string query, SocketUser usr, IMessageChannel channel,IGuild guild)
+        public async Task QueueSong(string query, SocketUser usr, IMessageChannel channel,IGuild guild, SocketUserMessage usrmsg)
         {
             if ((usr as IVoiceState).VoiceChannel == null)
             {
@@ -201,8 +233,12 @@ namespace RonoBot.Modules
                 .WithImageUrl(song.DefaultThumbnailUrl)
                 .WithFooter(new EmbedFooterBuilder().WithText(song.RequestAuthor.Username + " | " + song.Duration));
 
-            channel.SendMessageAsync("", false, embedQueue);
+            var msg = await channel.SendMessageAsync("", false, embedQueue);
 
+            await Task.Delay(6000);
+
+            await usrmsg.DeleteAsync().ConfigureAwait(false);
+            await msg.DeleteAsync().ConfigureAwait(false);
         }
 
         public async Task QueuePlaylist(string playlistUrl, SocketUser usr, IMessageChannel channel, IGuild guild, IVoiceChannel target)
@@ -275,20 +311,31 @@ namespace RonoBot.Modules
             IAudioClient client;
             //If the bot isn't connected to any channel, it will attempt to join one before starting
             //the music playback
-            if (!ConnectedChannels.TryGetValue(guild.Id, out client))
+            if (mp.ended)
             {
                 await LeaveAudio(guild, target);
+                mp.ended = false;
+            }
+
+            if (!ConnectedChannels.TryGetValue(guild.Id, out client))
+            {
+               // await LeaveAudio(guild, target);
                 await JoinAudio(guild, target, usr, channel);
             }
+
             if (ConnectedChannels.TryGetValue(guild.Id, out client))
             {
+                //Console.WriteLine("Starting mp, setting client");
                 //Sets the necessary properties to the MusicPlayer class
                 mp.AudioClient = client;
+                //Console.WriteLine("Client set, channel");
                 mp.MessageChannel = channel;
 
+                //Console.WriteLine("begin");
                 //Starts the player loop thread
                 mp.Begin();
             }
+            
         }    
      
     }

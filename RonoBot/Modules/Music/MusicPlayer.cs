@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Collections;
 using System.IO;
 using Discord.Rest;
+using Discord.WebSocket;
 
 namespace RonoBot.Modules.Audio
 {
@@ -17,16 +18,20 @@ namespace RonoBot.Modules.Audio
         private Thread musicPlayer;
         private List<YTSong> SongList = new List<YTSong>();
         public int CurrentSongID { get; set; } = 0;
+        private int PreviousSongID = 0;
         public bool Playing { get; private set; } = false;
+        public bool skipped = false;
+        public bool ended = false;
         public bool LoopList { get; set; } = false;
         public IMessageChannel MessageChannel {get;set;}
+
         private object locker = new object();
         private int bytesSent = 0;
         private bool error = false;
         const int _frameBytes = 3840;
         const float _miliseconds = 20.0f;
         public TimeSpan CurTime => TimeSpan.FromSeconds(bytesSent / (float)_frameBytes / (1000 / _miliseconds));
-
+        private IUserMessage curSongMessage;
         public IAudioClient AudioClient { get; set; }
         private CancellationTokenSource SongCancelSource { get; set; }
 
@@ -35,9 +40,9 @@ namespace RonoBot.Modules.Audio
         {
             if (SongList.Count != 0)
             {
-                this.SongCancelSource = new CancellationTokenSource();
-                musicPlayer = new Thread(new ThreadStart(Play));
                 Playing = true;
+                this.SongCancelSource = new CancellationTokenSource();
+                musicPlayer = new Thread(new ThreadStart(Play));               
                 musicPlayer.Start();
             }
             else
@@ -73,7 +78,7 @@ namespace RonoBot.Modules.Audio
                     ffmpeg.Start();
                     songStream = ffmpeg.StandardOutput.BaseStream;
                     
-
+                    //When for some reason the given song has no data, an error will be shown.
                     if (songStream.Read(buffer, 0, 3840) == 0)
                     {
                         ShowSongNullEmbed();
@@ -100,7 +105,7 @@ namespace RonoBot.Modules.Audio
                 }
                 finally
                 {
-                    if (!error)
+                    if (!error && !skipped)
                         ShowSongEndedEmbed();
                     else
                         error = false;
@@ -121,12 +126,15 @@ namespace RonoBot.Modules.Audio
                         pcm.Dispose();
                         songStream.Dispose();
 
+                        //If the song list is not over yet and there is another song to be played.
                         if (NextSong())
                         {
                             CurrentSongID++;
                         }
                         else
                         {
+                            //If the song list is over, but the loop setting is on (makes the list start over when 
+                            //it reaches its end)
                             if (LoopList)
                             {
                                 CurrentSongID = 0;
@@ -247,7 +255,7 @@ namespace RonoBot.Modules.Audio
                        .WithThumbnailUrl(curSong.DefaultThumbnailUrl);
 
             embedCur.AddField(songTitle);
-            await MessageChannel.SendMessageAsync("", false, embedCur);
+            curSongMessage = await MessageChannel.SendMessageAsync("", false, embedCur);
         }
 
         public async void ShowSongNullEmbed()
@@ -274,21 +282,122 @@ namespace RonoBot.Modules.Audio
             await MessageChannel.SendMessageAsync("", false, embedCur);
         }
 
+        public async void ShowSongSkippedEmbed(int n)
+        {
+            if (CurrentSong() == null)
+                return;
+
+            await curSongMessage.DeleteAsync();
+
+            YTSong curSong = CurrentSong();
+
+            EmbedFieldBuilder songTitle = new EmbedFieldBuilder();
+
+            songTitle.WithName("** " + (PreviousSongID+1) + " # --> "+(curSong.Order+1)+" #**")
+                            .WithIsInline(false)
+                            .WithValue("`" + "¯\\_(ツ)_/¯" + "`");
+
+            var embedSkip = new EmbedBuilder()
+                       .WithColor(new Color(240, 230, 231))
+                       .WithAuthor(author => { author.WithName("Pulando "+n+" músicas").WithIconUrl("https://cdn.discordapp.com/avatars/390402848443203595/d2831182eb4d3177febd28f44b4ec936.png?size=256"); })
+                      .WithThumbnailUrl(curSong.DefaultThumbnailUrl);
+
+            embedSkip.AddField(songTitle);
+
+            var msg = await MessageChannel.SendMessageAsync("", false, embedSkip);
+            await Task.Delay(12000);
+            await msg.DeleteAsync();
+        }
+
+        public async void ShowSongSkippedEmbed(SocketUser usr)
+        {
+            if (CurrentSong() == null)
+                return;
+
+            await curSongMessage.DeleteAsync();
+
+            YTSong curSong = CurrentSong();
+
+            EmbedFieldBuilder songTitle = new EmbedFieldBuilder();
+
+            songTitle.WithName("--")
+                            .WithIsInline(false)
+                            .WithValue("`Cortesia de "+usr.Username+"`");
+
+            var embedSkip = new EmbedBuilder()
+                       .WithColor(new Color(240, 230, 231))
+                       .WithAuthor(author => { author.WithName(" Pulando musiquinha lixo").WithIconUrl("https://cdn.discordapp.com/avatars/390402848443203595/d2831182eb4d3177febd28f44b4ec936.png?size=256"); })
+                       .WithThumbnailUrl(curSong.DefaultThumbnailUrl);
+
+
+            embedSkip.AddField(songTitle);
+
+            var msg = await MessageChannel.SendMessageAsync("", false, embedSkip);
+            await Task.Delay(12000);
+            await msg.DeleteAsync();
+        }
+
 
         public async void ShowSongEndedEmbed()
         {
             if (CurrentSong() == null)
                 return;
 
+            if (curSongMessage != null)
+            {
+                try
+                {
+                    await curSongMessage.DeleteAsync();
+                }
+                catch(Exception e)
+                {
+                    Console.WriteLine("Couldn't delete last message??");
+                    return;
+                }
+            }
+
             YTSong curSong = CurrentSong();
+
+            if (curSong == null)
+                return;
+
+            EmbedFieldBuilder songTitle = new EmbedFieldBuilder();
+
+            songTitle.WithName("** " + curSong.Order + " # **")
+                            .WithIsInline(false)
+                            .WithValue("[" + curSong.Title + "](" + curSong.Url + ")" +
+                            "\n\n`" + curSong.RequestAuthor.Username + " | " + curSong.Duration + "`");
+
             var embedEnd = new EmbedBuilder()
                        .WithColor(new Color(240, 230, 231))
-                       .WithTitle(curSong.Order + "# " + curSong.Title)
-                       .WithDescription("Fim.")
-                       .WithUrl(curSong.Url)
-                       .WithFooter(new EmbedFooterBuilder().WithText(curSong.RequestAuthor.Username + " | " + curSong.Duration)); ;
+                       .WithAuthor(author => { author.WithName(" Fim.").WithIconUrl("https://cdn.discordapp.com/avatars/390402848443203595/d2831182eb4d3177febd28f44b4ec936.png?size=256"); })
+                       .WithThumbnailUrl(curSong.DefaultThumbnailUrl);
 
-            await MessageChannel.SendMessageAsync("", false, embedEnd);
+            embedEnd.AddField(songTitle);
+
+            var msg = await MessageChannel.SendMessageAsync("", false, embedEnd);
+            await Task.Delay(10000);
+            await msg.DeleteAsync();
+        }
+
+        public async void PlaybackEndEmbed()
+        {
+
+            EmbedFieldBuilder songTitle = new EmbedFieldBuilder();
+
+            songTitle.WithName("** Fim da reprodução **")
+                            .WithIsInline(false)
+                            .WithValue("`" + MessageChannel.Name + "`");
+
+            var embedSkip = new EmbedBuilder()
+                       .WithColor(new Color(240, 230, 231))
+                       .WithAuthor(author => { author.WithName("♪ ♪").WithIconUrl("https://cdn.discordapp.com/avatars/390402848443203595/d2831182eb4d3177febd28f44b4ec936.png?size=256"); });
+
+            embedSkip.AddField(songTitle);
+
+            var msg = await MessageChannel.SendMessageAsync("", false, embedSkip);
+            await Task.Delay(15000);
+            await msg.DeleteAsync();
         }
 
         public async void ListSongs(IMessageChannel channel, int page)
@@ -403,8 +512,13 @@ namespace RonoBot.Modules.Audio
         public void Clear()
         {
             Playing = false;
+            ended = true;
+            
+            //ShowSongEndedEmbed();
+            PlaybackEndEmbed();
             CurrentSongID = 0;
             SongList.Clear();
+            AudioClient.StopAsync();
             AudioClient = null;
             MessageChannel = null;
         }
@@ -426,10 +540,12 @@ namespace RonoBot.Modules.Audio
             return bytesSent;
         }
 
-        public void Next()
+        public void Next(SocketUser usr)
         {
+            skipped = true;
             StopSong();
 
+            ShowSongSkippedEmbed(usr);
 
             //If the music player is set to loop we dont have to worry whether or not we should 
             //check if there is a next song available.
@@ -439,12 +555,22 @@ namespace RonoBot.Modules.Audio
                 Playing = NextSong();
         }
 
-        public void Next(int n)
+        public void Next(int n, SocketUser usr)
         {
+            skipped = true;
             StopSong();
 
+            PreviousSongID = CurrentSongID;
+
             
+
+            //Array indexation begins with 0, however its more usual to start counting from 1 and the parameter works like that.
             CurrentSongID += n-1;
+
+            if (n == 1)
+                ShowSongSkippedEmbed(usr);
+            else
+                ShowSongSkippedEmbed(n);
 
             //If the music player is set to loop we dont have to worry whether or not we should 
             //check if there is a next song available.
