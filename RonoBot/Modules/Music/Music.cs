@@ -45,11 +45,7 @@ namespace RonoBot.Modules
         {
             _service.QueueSong(song, Context.User, Context.Channel, Context.Guild, Context.Message);
 
-            //When a user requests many songs in a short span of time, this results in multiple threads going through
-            //same parts of the code. Specifically, when a user queues a song, if the bot isn't connected to a voice channel,
-            //meaning this was the first song requested, the bot must join the channel, however only once. Attempting to connect
-            //to a voice channel whilst already being in one results in a error.
-            if (_service.getMPEnded())
+            if (_service.GetMPEnded())
             {
                 _service.firstSong = true;
             }
@@ -79,7 +75,7 @@ namespace RonoBot.Modules
         [Alias("np")]
         public async Task NowPlayingAsync()
         {                 
-            if (!_service.isPlaying())
+            if (!_service.IsPlaying())
             {
                 await Context.Channel.SendMessageAsync("Não há nenhuma música tocando");
                 return;
@@ -91,7 +87,7 @@ namespace RonoBot.Modules
         [Alias("lps")]
         public async Task LoopStatusAsync()
         {
-            if (!_service.isPlaying())
+            if (!_service.IsPlaying())
             {
                 await SendDescriptionOnlyEmbed("Não é possível checar o status do loop sem nenhuma música tocando");
                 return;
@@ -115,7 +111,7 @@ namespace RonoBot.Modules
         public async Task LoopAsync()
         {
             //Loop wont be toggled if the MP is not playing anything
-            if (!_service.isPlaying())
+            if (!_service.IsPlaying())
             {
                 await SendDescriptionOnlyEmbed("Não é possível alterar o status do loop sem nenhuma música tocando");
                 return;          

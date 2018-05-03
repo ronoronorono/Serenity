@@ -19,25 +19,17 @@ namespace RonoBot.Modules
 
         private MusicPlayer mp = new MusicPlayer();
 
-        private Object locker = new Object();
-
-        private CancellationTokenSource QueuePlaylistCancel { get; set; }
-
         public bool firstSong = true;
 
         private bool cancelPlaylist = false;
 
-        public Boolean isOnVoice(IGuild guild)
+        public Boolean IsOnVoice(IGuild guild)
         {
-            IAudioClient client;
-
-            return (ConnectedChannels.TryGetValue(guild.Id, out client));
+            return (ConnectedChannels.TryGetValue(guild.Id, out IAudioClient client));
         }
 
         public async Task JoinAudio(IGuild guild, IVoiceChannel target, SocketUser msgAuthor, IMessageChannel channel)
-        {
-            IAudioClient client;
-            
+        {            
             //If target's null, the user is not connected to a voice channel
             if (target == null)
             {
@@ -46,7 +38,7 @@ namespace RonoBot.Modules
             }
            
             //If the bot is already in a channel
-            if (isOnVoice(guild))
+            if (IsOnVoice(guild))
             {
                 return;
             }
@@ -73,13 +65,12 @@ namespace RonoBot.Modules
 
         public async Task LeaveAudio(IGuild guild, IVoiceChannel target)
         {
-            IAudioClient client;
 
-           // Connected = false;
+            // Connected = false;
 
             //If the bot is connected to a voice channel and its inside the dictionary with the guild's id,
             //we can get the AudioClient from the dictionary and stop it
-            if (ConnectedChannels.TryRemove(guild.Id, out client))
+            if (ConnectedChannels.TryRemove(guild.Id, out IAudioClient client))
             {
                 await client.StopAsync();
                 return;
@@ -119,7 +110,7 @@ namespace RonoBot.Modules
             return mp.ListSize();
         }
 
-        public bool isPlaying()
+        public bool IsPlaying()
         {
             return mp.Playing;
         }
@@ -149,7 +140,7 @@ namespace RonoBot.Modules
             mp.LoopList = !mp.LoopList;
         }
 
-        public async void ListQueue(IMessageChannel channel)
+        public void ListQueue(IMessageChannel channel)
         {
             var tempChannel = mp.MessageChannel;
             mp.MessageChannel = channel;
@@ -157,7 +148,7 @@ namespace RonoBot.Modules
             mp.MessageChannel = tempChannel;
         }
 
-        public async void ListQueue(IMessageChannel channel, int page)
+        public void ListQueue(IMessageChannel channel, int page)
         {
             var tempChannel = mp.MessageChannel;
             mp.MessageChannel = channel;
@@ -180,7 +171,7 @@ namespace RonoBot.Modules
             return mp.BytesSent();
         }
 
-        public bool getMPEnded()
+        public bool GetMPEnded()
         {
             return mp.Ended;
         }
@@ -318,7 +309,6 @@ namespace RonoBot.Modules
 
         public async Task StartMusicPlayer(IGuild guild, IVoiceChannel target, SocketUser usr, IMessageChannel channel)
         {
-            IAudioClient client;
             if (mp.Ended)
             {
                 await LeaveAudio(guild, target);
@@ -327,7 +317,7 @@ namespace RonoBot.Modules
 
             //If the bot isn't connected to any channel, it will attempt to join one before starting
             //the music playback
-            if (!ConnectedChannels.TryGetValue(guild.Id, out client))
+            if (!ConnectedChannels.TryGetValue(guild.Id, out IAudioClient client))
             {
                // await LeaveAudio(guild, target);
                 await JoinAudio(guild, target, usr, channel);

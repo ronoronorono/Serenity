@@ -17,23 +17,29 @@ namespace RonoBot.Modules.Audio
     {
         private Thread musicPlayer;
         private List<YTSong> SongList = new List<YTSong>();
+
         public int CurrentSongID { get; set; } = 0;
         private int PreviousSongID = 0;
+
         public bool Playing { get; private set; } = false;
         public bool Skipped { get; set; } = false;
         public bool Ended { get; set; }  = false;
         public bool LoopList { get; set; } = false;
+
         public IMessageChannel MessageChannel {get;set;}
+        public IAudioClient AudioClient { get; set; }
 
         private object locker = new object();
+
         private int bytesSent = 0;
         private bool error = false;
+        private CancellationTokenSource SongCancelSource { get; set; }
         const int _frameBytes = 3840;
         const float _miliseconds = 20.0f;
         public TimeSpan CurTime => TimeSpan.FromSeconds(bytesSent / (float)_frameBytes / (1000 / _miliseconds));
         private IUserMessage curSongMessage;
-        public IAudioClient AudioClient { get; set; }
-        private CancellationTokenSource SongCancelSource { get; set; }
+        
+        
 
 
         public void Begin()
@@ -165,49 +171,92 @@ namespace RonoBot.Modules.Audio
             return null;
         }
 
+        public bool NextSong()
+        {
+            return (CurrentSongID < SongList.Count - 1);
+        }
+
+        public void Next(SocketUser usr)
+        {
+            Skipped = true;
+            StopSong();
+
+            ShowSongSkippedEmbed(usr);
+
+            //If the music player is set to loop we dont have to worry whether or not we should 
+            //check if there is a next song available.
+            if (LoopList)
+                Playing = true;
+            else
+                Playing = NextSong();
+        }
+
+        public void Next(int n, SocketUser usr)
+        {
+            Skipped = true;
+            StopSong();
+
+            PreviousSongID = CurrentSongID;
+
+
+
+            //Array indexation begins with 0, however its more usual to start counting from 1 and the parameter works like that.
+            CurrentSongID += n - 1;
+
+            if (n == 1)
+                ShowSongSkippedEmbed(usr);
+            else
+                ShowSongSkippedEmbed(n);
+
+            //If the music player is set to loop we dont have to worry whether or not we should 
+            //check if there is a next song available.
+            if (LoopList)
+                Playing = true;
+            else
+                Playing = NextSong();
+        }
+
+        public void Clear()
+        {
+            Playing = false;
+            Ended = true;
+
+            //ShowSongEndedEmbed();           
+            CurrentSongID = 0;
+            SongList.Clear();
+            /*AudioClient.StopAsync();
+            AudioClient = null;
+            MessageChannel = null;*/
+        }
+
+        public void Destroy()
+        {
+            Playing = false;
+            Ended = true;
+
+            AudioClient.StopAsync();
+            AudioClient = null;
+            MessageChannel = null;
+        }
+
+        public void Enqueue(YTSong song)
+        {
+            SongList.Add(song);
+        }
+
+        public void StopSong()
+        {
+            var cs = SongCancelSource;
+            SongCancelSource = new CancellationTokenSource();
+            cs.Cancel();
+        }
+
         public int ListSize()
         {
             return SongList.Count;
         }
 
-        public string FormattedCurTime()
-        {
-            string time = "";
-
-            string hours = "";
-            string minutes = "";
-            string seconds = "";
-
-            TimeSpan curTime = CurTime;
-
-            if (curTime.Hours > 9)
-                hours = curTime.Hours + ":";
-            else if (curTime.Hours > 0)
-                hours = "0" + curTime.Hours + ":";
-
-            time += hours;
-
-            if (curTime.Minutes > 9)
-                minutes = curTime.Minutes + ":";
-            else if (curTime.Minutes > 0)
-                minutes = "0" + curTime.Minutes + ":";
-            else
-                minutes = "00:";
-
-            time += minutes;
-
-            if (curTime.Seconds > 9)
-                seconds = ""+curTime.Seconds;
-            else if (curTime.Seconds > 0)
-                seconds = "0" + curTime.Seconds;
-            else
-                seconds = "00";
-
-            time += seconds;
-
-            return time;
-        }
-
+      
         public EmbedBuilder CurrentSongEmbed()
         {
             if (CurrentSong() == null)
@@ -287,23 +336,28 @@ namespace RonoBot.Modules.Audio
             await MessageChannel.SendMessageAsync("", false, embedCur);
         }
 
-        public async void ShowSongSkippedEmbed(int n)
+        private async void DeleteCurMessage()
         {
-            if (CurrentSong() == null)
-                return;
-
             if (curSongMessage != null)
             {
                 try
                 {
                     await curSongMessage.DeleteAsync();
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     Console.WriteLine("Couldn't delete last message??");
                     return;
                 }
             }
+        }
+
+        public async void ShowSongSkippedEmbed(int n)
+        {
+            if (CurrentSong() == null)
+                return;
+
+            DeleteCurMessage();
 
             YTSong curSong = CurrentSong();
 
@@ -330,18 +384,7 @@ namespace RonoBot.Modules.Audio
             if (CurrentSong() == null)
                 return;
 
-            if (curSongMessage != null)
-            {
-                try
-                {
-                    await curSongMessage.DeleteAsync();
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine("Couldn't delete last message??");
-                    return;
-                }
-            }
+            DeleteCurMessage();
 
             YTSong curSong = CurrentSong();
 
@@ -370,18 +413,7 @@ namespace RonoBot.Modules.Audio
             if (CurrentSong() == null)
                 return;
 
-            if (curSongMessage != null)
-            {
-                try
-                {
-                    await curSongMessage.DeleteAsync();
-                }
-                catch(Exception e)
-                {
-                    Console.WriteLine("Couldn't delete last message??");
-                    return;
-                }
-            }
+            DeleteCurMessage();
 
             YTSong curSong = CurrentSong();
 
@@ -530,92 +562,49 @@ namespace RonoBot.Modules.Audio
             }
             await MessageChannel.SendMessageAsync("", false, embedList);
         }
-
-        public bool NextSong()
-        {          
-            return (CurrentSongID < SongList.Count - 1);
-        }
-    
-        public void Clear()
-        {
-            Playing = false;
-            Ended = true;
-            
-            //ShowSongEndedEmbed();           
-            CurrentSongID = 0;
-            SongList.Clear();
-            /*AudioClient.StopAsync();
-            AudioClient = null;
-            MessageChannel = null;*/
-        }
-
-        public void Destroy()
-        {
-            Playing = false;
-            Ended = true;
-
-            AudioClient.StopAsync();
-            AudioClient = null;
-            MessageChannel = null;
-        }
-
-        public void Enqueue(YTSong song)
-        {
-            SongList.Add(song);
-        }
-
-        public void StopSong()
-        {
-            var cs = SongCancelSource;
-            SongCancelSource = new CancellationTokenSource();
-            cs.Cancel();
-        }
-      
+                    
         public double BytesSent()
         {
             return bytesSent;
         }
 
-        public void Next(SocketUser usr)
+        public string FormattedCurTime()
         {
-            Skipped = true;
-            StopSong();
+            string time = "";
 
-            ShowSongSkippedEmbed(usr);
+            string hours = "";
+            string minutes = "";
+            string seconds = "";
 
-            //If the music player is set to loop we dont have to worry whether or not we should 
-            //check if there is a next song available.
-            if (LoopList)
-                Playing = true;
+            TimeSpan curTime = CurTime;
+
+            if (curTime.Hours > 9)
+                hours = curTime.Hours + ":";
+            else if (curTime.Hours > 0)
+                hours = "0" + curTime.Hours + ":";
+
+            time += hours;
+
+            if (curTime.Minutes > 9)
+                minutes = curTime.Minutes + ":";
+            else if (curTime.Minutes > 0)
+                minutes = "0" + curTime.Minutes + ":";
             else
-                Playing = NextSong();
+                minutes = "00:";
+
+            time += minutes;
+
+            if (curTime.Seconds > 9)
+                seconds = "" + curTime.Seconds;
+            else if (curTime.Seconds > 0)
+                seconds = "0" + curTime.Seconds;
+            else
+                seconds = "00";
+
+            time += seconds;
+
+            return time;
         }
-
-        public void Next(int n, SocketUser usr)
-        {
-            Skipped = true;
-            StopSong();
-
-            PreviousSongID = CurrentSongID;
-
-            
-
-            //Array indexation begins with 0, however its more usual to start counting from 1 and the parameter works like that.
-            CurrentSongID += n-1;
-
-            if (n == 1)
-                ShowSongSkippedEmbed(usr);
-            else
-                ShowSongSkippedEmbed(n);
-
-            //If the music player is set to loop we dont have to worry whether or not we should 
-            //check if there is a next song available.
-            if (LoopList)
-                Playing = true;
-            else
-                Playing = NextSong();
-        }
-
 
         public Process FFmpegProcess(string URI)
         {
