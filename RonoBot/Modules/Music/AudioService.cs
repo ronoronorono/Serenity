@@ -19,37 +19,19 @@ namespace RonoBot.Modules
 
         private MusicPlayer mp = new MusicPlayer();
 
-        private Object queueLock = new Object();
+        private Object locker = new Object();
 
-        public bool Connected { get; set; } = false;
+        private CancellationTokenSource QueuePlaylistCancel { get; set; }
 
         public bool firstSong = true;
+
+        private bool cancelPlaylist = false;
 
         public Boolean isOnVoice(IGuild guild)
         {
             IAudioClient client;
 
             return (ConnectedChannels.TryGetValue(guild.Id, out client));
-        }
-
-        public bool getMPEnded()
-        {
-            return mp.ended;
-        }
-        //Determines whether the Music player is startable or not
-        public Boolean CanMPStart(IGuild guild)
-        {
-            if (isOnVoice(guild))
-            {
-                //Is connected to a voice channel however is already playing a song
-                if (isPlaying())
-                    return false;
-
-                return true;
-            }
-
-            //Isn't connected to a voice channel neither playing a song
-            return true;
         }
 
         public async Task JoinAudio(IGuild guild, IVoiceChannel target, SocketUser msgAuthor, IMessageChannel channel)
@@ -64,7 +46,7 @@ namespace RonoBot.Modules
             }
            
             //If the bot is already in a channel
-            if (ConnectedChannels.TryGetValue(guild.Id, out client))
+            if (isOnVoice(guild))
             {
                 return;
             }
@@ -78,13 +60,12 @@ namespace RonoBot.Modules
             try
             {
                     var audioClient = await target.ConnectAsync();
-                    Connected = true;
                     //The channel is added to the concurrentdictionary for futher operations
                     ConnectedChannels.TryAdd(guild.Id, audioClient);
             }
             catch (Exception e)
             {
-               // ExceptionHandler.WriteToFile(e);      
+                ExceptionHandler.WriteToFile(e);      
                 //StopMusicPlayer();
                // await LeaveAudio(guild, target);
             }
@@ -120,9 +101,12 @@ namespace RonoBot.Modules
        
         public void StopMusicPlayer()
         {
+            /* var cs = QueuePlaylistCancel;
+             QueuePlaylistCancel = new CancellationTokenSource();
+             cs.Cancel();*/
+            cancelPlaylist = true;
             mp.StopSong();
-            //MpStarted = false;
-            //mp.Clear();
+            mp.Clear();
         }
 
         public int GetMPCurSongID()
@@ -196,6 +180,11 @@ namespace RonoBot.Modules
             return mp.BytesSent();
         }
 
+        public bool getMPEnded()
+        {
+            return mp.Ended;
+        }
+
         public async Task QueueSong(string query, SocketUser usr, IMessageChannel channel,IGuild guild, SocketUserMessage usrmsg)
         {
             if ((usr as IVoiceState).VoiceChannel == null)
@@ -263,30 +252,51 @@ namespace RonoBot.Modules
 
             for (int i = 0; i < songs.Length; i++)
             {
-                //Video video = YTVideoOperation.SearchVideoByID(songs[i].Snippet.ResourceId.VideoId);
-
-                var song = songs[i];
-
-                string uri = YTVideoOperation.GetVideoURIExplode(songs[i].Snippet.ResourceId.VideoId).Result;
-
-                if (uri == null)
-                    uri = YTVideoOperation.GetVideoAudioURI("https://www.youtube.com/watch?v=" + songs[i].Snippet.ResourceId.VideoId);
-
-                if (uri == null || uri == "")
+                try
                 {
-                    unavailableVids++;
+                    //Video video = YTVideoOperation.SearchVideoByID(songs[i].Snippet.ResourceId.VideoId);
+                    if (cancelPlaylist)
+                        break;
+
+                    var song = songs[i];
+
+                    string uri = YTVideoOperation.GetVideoURIExplode(songs[i].Snippet.ResourceId.VideoId).Result;
+
+                    if (uri == null)
+                        uri = YTVideoOperation.GetVideoAudioURI("https://www.youtube.com/watch?v=" + songs[i].Snippet.ResourceId.VideoId);
+
+                    if (uri == null || uri == "")
+                    {
+                        unavailableVids++;
+                    }
+                    else
+                    {
+                        YTSong playlistSong = new YTSong(song.Snippet.Title,
+                                                         song.Snippet.Thumbnails.Default__.Url,
+                                                         song.Snippet.ResourceId.VideoId, uri, "playlist", SongOrder(), usr, YTVideoOperation.GetVideoDuration(song.Snippet.ResourceId.VideoId));
+                        mp.Enqueue(playlistSong);
+                        x++;
+                    }
+
+                    if (cancelPlaylist)
+                        break;
                 }
-                else
+                catch (OperationCanceledException)
                 {
-                    YTSong playlistSong = new YTSong(song.Snippet.Title,
-                                                     song.Snippet.Thumbnails.Default__.Url,
-                                                     song.Snippet.ResourceId.VideoId, uri, "playlist", SongOrder(), usr, YTVideoOperation.GetVideoDuration(song.Snippet.ResourceId.VideoId));
-                    mp.Enqueue(playlistSong);
-                    x++;
-                }
+                    Console.WriteLine("QUEUE PLAYLIST CANCELED");
+                    //cancelPlaylist = true;
+                    //Playing = false;
+                }               
 
                 if (!mp.Playing)
                     StartMusicPlayer(guild,target,usr,channel);
+            }
+
+            if (cancelPlaylist)
+            {
+                mp.Clear();
+                cancelPlaylist = false;
+                return;
             }
 
             if (unavailableVids == 0)
@@ -309,14 +319,14 @@ namespace RonoBot.Modules
         public async Task StartMusicPlayer(IGuild guild, IVoiceChannel target, SocketUser usr, IMessageChannel channel)
         {
             IAudioClient client;
-            //If the bot isn't connected to any channel, it will attempt to join one before starting
-            //the music playback
-            if (mp.ended)
+            if (mp.Ended)
             {
                 await LeaveAudio(guild, target);
-                mp.ended = false;
+                mp.Ended = false;
             }
 
+            //If the bot isn't connected to any channel, it will attempt to join one before starting
+            //the music playback
             if (!ConnectedChannels.TryGetValue(guild.Id, out client))
             {
                // await LeaveAudio(guild, target);

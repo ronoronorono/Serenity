@@ -8,6 +8,7 @@ using System.Xml;
 using YoutubeExplode;
 using System.Threading.Tasks;
 using System.Linq;
+using System.Threading;
 
 namespace RonoBot.Modules.Audio
 {

@@ -20,8 +20,8 @@ namespace RonoBot.Modules.Audio
         public int CurrentSongID { get; set; } = 0;
         private int PreviousSongID = 0;
         public bool Playing { get; private set; } = false;
-        public bool skipped = false;
-        public bool ended = false;
+        public bool Skipped { get; set; } = false;
+        public bool Ended { get; set; }  = false;
         public bool LoopList { get; set; } = false;
         public IMessageChannel MessageChannel {get;set;}
 
@@ -105,10 +105,13 @@ namespace RonoBot.Modules.Audio
                 }
                 finally
                 {
-                    if (!error && !skipped)
+                    if (!error && !Skipped)
                         ShowSongEndedEmbed();
                     else
+                    {
                         error = false;
+                        Skipped = false;
+                    }
 
                     if (pcm != null)
                     {
@@ -141,7 +144,9 @@ namespace RonoBot.Modules.Audio
                             }
                             else
                             {
+                                PlaybackEndEmbed();
                                 Clear();
+                                Destroy();
                             }
                         }
                     }
@@ -287,7 +292,18 @@ namespace RonoBot.Modules.Audio
             if (CurrentSong() == null)
                 return;
 
-            await curSongMessage.DeleteAsync();
+            if (curSongMessage != null)
+            {
+                try
+                {
+                    await curSongMessage.DeleteAsync();
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Couldn't delete last message??");
+                    return;
+                }
+            }
 
             YTSong curSong = CurrentSong();
 
@@ -314,7 +330,18 @@ namespace RonoBot.Modules.Audio
             if (CurrentSong() == null)
                 return;
 
-            await curSongMessage.DeleteAsync();
+            if (curSongMessage != null)
+            {
+                try
+                {
+                    await curSongMessage.DeleteAsync();
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Couldn't delete last message??");
+                    return;
+                }
+            }
 
             YTSong curSong = CurrentSong();
 
@@ -387,7 +414,7 @@ namespace RonoBot.Modules.Audio
 
             songTitle.WithName("** Fim da reprodução **")
                             .WithIsInline(false)
-                            .WithValue("`" + MessageChannel.Name + "`");
+                            .WithValue("`" + "--" + "`");
 
             var embedSkip = new EmbedBuilder()
                        .WithColor(new Color(240, 230, 231))
@@ -512,12 +539,21 @@ namespace RonoBot.Modules.Audio
         public void Clear()
         {
             Playing = false;
-            ended = true;
+            Ended = true;
             
-            //ShowSongEndedEmbed();
-            PlaybackEndEmbed();
+            //ShowSongEndedEmbed();           
             CurrentSongID = 0;
             SongList.Clear();
+            /*AudioClient.StopAsync();
+            AudioClient = null;
+            MessageChannel = null;*/
+        }
+
+        public void Destroy()
+        {
+            Playing = false;
+            Ended = true;
+
             AudioClient.StopAsync();
             AudioClient = null;
             MessageChannel = null;
@@ -542,7 +578,7 @@ namespace RonoBot.Modules.Audio
 
         public void Next(SocketUser usr)
         {
-            skipped = true;
+            Skipped = true;
             StopSong();
 
             ShowSongSkippedEmbed(usr);
@@ -557,7 +593,7 @@ namespace RonoBot.Modules.Audio
 
         public void Next(int n, SocketUser usr)
         {
-            skipped = true;
+            Skipped = true;
             StopSong();
 
             PreviousSongID = CurrentSongID;

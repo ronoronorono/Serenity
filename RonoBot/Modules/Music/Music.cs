@@ -51,7 +51,6 @@ namespace RonoBot.Modules
             //to a voice channel whilst already being in one results in a error.
             if (_service.getMPEnded())
             {
-                Console.WriteLine("ENDED TRUE ASDSAD");
                 _service.firstSong = true;
             }
 
